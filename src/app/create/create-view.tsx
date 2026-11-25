@@ -55,24 +55,32 @@ function Create({ session }: { session: Session }) {
         </h1>
         <p className="a-sub">Share this code in your class group. You let people in from the dashboard.</p>
         <CodeTicket code={created.code} roomName={settings.name} />
-        <Link href={`/rooms/${created.roomId}/manage`} className="btn">Open the dashboard</Link>
-        <Link href={`/rooms/${created.roomId}`} className="btn-secondary">View room as a member</Link>
+        <Link href={`/rooms/${created.roomId}/manage`} className="btn">
+          Open the dashboard
+        </Link>
+        <Link href={`/rooms/${created.roomId}`} className="btn-secondary">
+          View room as a member
+        </Link>
       </Page>
     );
   }
 
   return (
-    <Page>
+    <Page size="wide">
       <BackLink href="/rooms">Back</BackLink>
       <h1 className="a-h enter">
         Start a room for <em>your class</em>
       </h1>
       <p className="a-sub enter-2">You&apos;ll be the moderator. It takes a minute.</p>
-      <form onSubmit={submit} className="flex flex-col gap-3.5" noValidate>
-        <RoomSettingsFields value={settings} onChange={setSettings} />
+      <form onSubmit={submit} className="grid gap-3.5 lg:grid-cols-2 lg:items-start lg:gap-x-10 lg:gap-y-5" noValidate>
+        <section aria-label="Room settings" className="flex flex-col gap-3.5">
+          <RoomSettingsFields value={settings} onChange={setSettings} />
+        </section>
 
         <section aria-labelledby="upi-heading" className="flex flex-col gap-2.5">
-          <h2 id="upi-heading" className="label">Where the money goes</h2>
+          <h2 id="upi-heading" className="label">
+            Where the money goes
+          </h2>
           <p className="hint -mt-1.5">Add 2–3 UPI IDs so no single account gets swamped, and so there&apos;s a backup on the owner&apos;s own birthday.</p>
           {upis.map((u, i) => (
             <UpiFields
@@ -92,11 +100,13 @@ function Create({ session }: { session: Session }) {
           )}
         </section>
 
-        <ErrorNote>{error}</ErrorNote>
-        <button type="submit" className="btn" disabled={!canSubmit}>
-          {saving ? "Creating…" : "Create room"}
-        </button>
-        {!canSubmit && !saving && <p className="hint -mt-1.5 text-center">Add a room name, an amount and at least one valid UPI ID.</p>}
+        <div className="flex flex-col gap-2 lg:col-span-2 lg:mx-auto lg:w-full lg:max-w-md">
+          <ErrorNote>{error}</ErrorNote>
+          <button type="submit" className="btn" disabled={!canSubmit}>
+            {saving ? "Creating…" : "Create room"}
+          </button>
+          {!canSubmit && !saving && <p className="hint text-center">Add a room name, an amount and at least one valid UPI ID.</p>}
+        </div>
       </form>
     </Page>
   );

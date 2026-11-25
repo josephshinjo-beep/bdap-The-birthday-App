@@ -51,6 +51,19 @@
     font-size: 14px;
     color: var(--muted);
   }
+  @media (min-width: 768px) {
+    .a-h {
+      font-size: 36px;
+    }
+    .a-sub {
+      font-size: 16px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .a-h {
+      font-size: 42px;
+    }
+  }
 
   /* Buttons: one plum main button per screen, white secondary, mint "ok". */
   .btn,

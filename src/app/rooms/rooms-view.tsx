@@ -16,45 +16,65 @@ function Rooms({ session }: { session: Session }) {
   const first = session.profile?.fullName.split(" ")[0];
 
   return (
-    <Page>
+    <Page size="wide">
       <h1 className="a-h enter">
         Hey <em>{first}</em> 👋
       </h1>
       <p className="a-sub enter-2">Your class, hostel and club rooms.</p>
-      <PushPrompt />
+      <div className="lg:max-w-xl">
+        <PushPrompt />
+      </div>
       {rooms.loading ? (
         <Loading />
       ) : !rooms.data?.length ? (
-        <EmptyState
-          title="No rooms yet"
-          action={
-            <div className="flex flex-col gap-2">
-              <Link href="/join" className="btn">Join your class room</Link>
-              <Link href="/create" className="btn-secondary">Create a room</Link>
-            </div>
-          }
-        >
-          Join your class with the code your moderator shared, or start a room yourself.
-        </EmptyState>
+        <div className="lg:max-w-xl">
+          <EmptyState
+            title="No rooms yet"
+            action={
+              <div className="flex flex-col gap-2">
+                <Link href="/join" className="btn">
+                  Join your class room
+                </Link>
+                <Link href="/create" className="btn-secondary">
+                  Create a room
+                </Link>
+              </div>
+            }
+          >
+            Join your class with the code your moderator shared, or start a room yourself.
+          </EmptyState>
+        </div>
       ) : (
         <>
           <span className="label">Your rooms</span>
-          <ul className="flex flex-col gap-2">
+          <ul className="grid gap-2 md:grid-cols-2 lg:grid-cols-3 lg:gap-4">
             {rooms.data.map((r) => (
               <li key={r.id}>
-                <Link href={r.myStatus === "pending" ? `/rooms/${r.id}/waiting` : `/rooms/${r.id}`} className="card flex items-center gap-2.5">
+                <Link href={r.myStatus === "pending" ? `/rooms/${r.id}/waiting` : `/rooms/${r.id}`} className="card flex h-full items-center gap-2.5 lg:p-5">
                   <RoomBadge name={r.name} />
                   <span className="min-w-0 flex-1">
                     <b className="block truncate text-plum">{r.name}</b>
                     <span className="hint">{r.myStatus === "pending" ? "Waiting for approval" : roleLabel(r.myRole)}</span>
                   </span>
-                  {r.myStatus === "pending" ? <span className="pill pill-sun">Pending</span> : <span aria-hidden="true" className="text-plum">→</span>}
+                  {r.myStatus === "pending" ? (
+                    <span className="pill pill-sun">Pending</span>
+                  ) : (
+                    <span aria-hidden="true" className="text-plum">
+                      →
+                    </span>
+                  )}
                 </Link>
               </li>
             ))}
           </ul>
-          <Link href="/join" className="btn">Join another room</Link>
-          <Link href="/create" className="btn-secondary">Create a room</Link>
+          <div className="flex flex-col gap-3.5 md:flex-row">
+            <Link href="/join" className="btn md:px-7">
+              Join another room
+            </Link>
+            <Link href="/create" className="btn-secondary md:px-7">
+              Create a room
+            </Link>
+          </div>
         </>
       )}
     </Page>

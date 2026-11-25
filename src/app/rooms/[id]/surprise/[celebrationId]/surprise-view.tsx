@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
 import { GiftArt } from "@/components/gift";
 import { ScratchCard } from "@/components/scratch-card";
-import { Avatar, BackLink, Countdown, EmptyState, ErrorNote, Loading, Page } from "@/components/ui";
+import { Avatar, BackLink, Columns, Countdown, EmptyState, ErrorNote, Loading, Page } from "@/components/ui";
 import { data } from "@/lib/data";
 import { burstFrom, celebrate } from "@/lib/confetti";
 import { daysBetween, formatISODayMonth, relativeDays, todayIST } from "@/lib/dates";
@@ -23,12 +23,24 @@ function SurpriseLoader({ session }: { session: Session }) {
   const room = useAsync(() => data.getRoom(id), [id, session.userId]);
   const cel = useAsync(() => data.getCelebration(celebrationId), [celebrationId, session.userId]);
 
-  if (room.loading || cel.loading) return <Page><Loading /></Page>;
+  if (room.loading || cel.loading)
+    return (
+      <Page>
+        <Loading />
+      </Page>
+    );
   // The birthday person (and anyone outside the room) gets the same plain page: nothing to give it away.
   if (!room.data || room.data.myStatus !== "approved" || !cel.data || cel.data.roomId !== id) {
     return (
       <Page>
-        <EmptyState title="Nothing here" action={<Link href={room.data ? `/rooms/${id}` : "/rooms"} className="btn w-full">Back to the room</Link>}>
+        <EmptyState
+          title="Nothing here"
+          action={
+            <Link href={room.data ? `/rooms/${id}` : "/rooms"} className="btn w-full">
+              Back to the room
+            </Link>
+          }
+        >
           This page doesn&apos;t exist or has moved.
         </EmptyState>
       </Page>
@@ -61,7 +73,10 @@ function SurpriseFlow({ room, celebration }: { room: Room; celebration: Celebrat
     if (localStorage.getItem(UNWRAP_KEY(celebration.id)) !== "1") return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAlreadyOpened(true);
-    data.openSurprise(celebration.id).then(receive).catch((e: Error) => setError(e.message));
+    data
+      .openSurprise(celebration.id)
+      .then(receive)
+      .catch((e: Error) => setError(e.message));
   }, [celebration.id]);
 
   async function tapGift() {
@@ -86,41 +101,50 @@ function SurpriseFlow({ room, celebration }: { room: Room; celebration: Celebrat
   }
 
   return (
-    <Page>
+    <Page size="wide">
       <BackLink href={`/rooms/${room.id}`}>Room</BackLink>
-      <span className="pill pill-pink self-start">Top secret · {first} can&apos;t see this</span>
-      <h1 className="a-h">
-        A gift for <em>{first}</em>
-      </h1>
-      <p className="a-sub -mt-2">{formatISODayMonth(celebration.date)} · {relativeDays(days)}</p>
-      {days > 0 && <Countdown date={celebration.date} />}
-
-      {!surprise ? (
-        alreadyOpened && !error ? (
-          <Loading label="Opening your surprise" />
-        ) : (
-          <div className="flex flex-col items-center gap-2.5">
-            <button
-              ref={giftRef}
-              type="button"
-              onClick={tapGift}
-              disabled={opening}
-              aria-label={`Tap the gift to unwrap it, ${Math.max(0, 3 - taps)} taps left`}
-              className={`rounded-lg ${taps === 0 ? "float" : ""} ${shaking ? "shake" : ""}`}
-            >
-              <GiftArt size={170} open={taps >= 3} />
-            </button>
-            <p className="text-center text-[13px] text-muted" aria-live="polite">
-              {taps === 0 ? "Tap the gift 3 times to unwrap" : taps === 1 ? "Keep going…" : taps === 2 ? "One more!" : "Unwrapping…"}
+      <Columns
+        stickySide={!isAdmin}
+        main={
+          <>
+            <span className="pill pill-pink self-start">Top secret · {first} can&apos;t see this</span>
+            <h1 className="a-h">
+              A gift for <em>{first}</em>
+            </h1>
+            <p className="a-sub -mt-2">
+              {formatISODayMonth(celebration.date)} · {relativeDays(days)}
             </p>
-            <ErrorNote>{error}</ErrorNote>
-          </div>
-        )
-      ) : (
-        <Revealed surprise={surprise} firstName={first} amount={amount} onAmount={setAmount} />
-      )}
-
-      <PoolCard celebrationId={celebration.id} isAdmin={isAdmin} surprise={surprise} amount={amount} />
+            {days > 0 && <Countdown date={celebration.date} />}
+            <div className="flex flex-col gap-3 md:mx-auto md:w-full md:max-w-md lg:mx-0">
+              {!surprise ? (
+                alreadyOpened && !error ? (
+                  <Loading label="Opening your surprise" />
+                ) : (
+                  <div className="flex flex-col items-center gap-2.5">
+                    <button
+                      ref={giftRef}
+                      type="button"
+                      onClick={tapGift}
+                      disabled={opening}
+                      aria-label={`Tap the gift to unwrap it, ${Math.max(0, 3 - taps)} taps left`}
+                      className={`rounded-lg ${taps === 0 ? "float" : ""} ${shaking ? "shake" : ""}`}
+                    >
+                      <GiftArt size={170} open={taps >= 3} />
+                    </button>
+                    <p className="text-center text-[13px] text-muted" aria-live="polite">
+                      {taps === 0 ? "Tap the gift 3 times to unwrap" : taps === 1 ? "Keep going…" : taps === 2 ? "One more!" : "Unwrapping…"}
+                    </p>
+                    <ErrorNote>{error}</ErrorNote>
+                  </div>
+                )
+              ) : (
+                <Revealed surprise={surprise} firstName={first} amount={amount} onAmount={setAmount} />
+              )}
+            </div>
+          </>
+        }
+        side={<PoolCard celebrationId={celebration.id} isAdmin={isAdmin} surprise={surprise} amount={amount} />}
+      />
     </Page>
   );
 }
@@ -180,7 +204,9 @@ function Revealed({ surprise, firstName, amount, onAmount }: { surprise: Surpris
         <div className="pop-in flex flex-col gap-3">
           {surprise.amountMode !== "fixed" && (
             <div>
-              <label htmlFor="pay-amount" className="label">Your amount (₹)</label>
+              <label htmlFor="pay-amount" className="label">
+                Your amount (₹)
+              </label>
               <input
                 id="pay-amount"
                 className="field"
@@ -253,12 +279,21 @@ function PoolCard({ celebrationId, isAdmin, surprise, amount }: { celebrationId:
     <>
       <section aria-labelledby="pool" className="card flex flex-col gap-2">
         <div className="flex justify-between gap-2 text-[13px]">
-          <h2 id="pool" className="font-sans text-[13px] font-bold text-ink">Class pool</h2>
+          <h2 id="pool" className="font-sans text-[13px] font-bold text-ink">
+            Class pool
+          </h2>
           <span>
             {p.paidCount} of {p.eligibleCount} chipped in · {formatRupees(p.totalAmount)}
           </span>
         </div>
-        <div className="h-2.5 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={p.paidCount} aria-valuemin={0} aria-valuemax={p.eligibleCount} aria-label="People who chipped in">
+        <div
+          className="h-2.5 overflow-hidden rounded-full bg-surface-2"
+          role="progressbar"
+          aria-valuenow={p.paidCount}
+          aria-valuemin={0}
+          aria-valuemax={p.eligibleCount}
+          aria-label="People who chipped in"
+        >
           <i className="block h-full rounded-full bg-mint transition-[width] duration-500" style={{ width: `${pct}%` }} />
         </div>
         {surprise?.upi && (
@@ -274,7 +309,9 @@ function PoolCard({ celebrationId, isAdmin, surprise, amount }: { celebrationId:
       {isAdmin && payers.data && payers.data.length > 0 && (
         <section aria-labelledby="payers" className="card">
           <div className="flex items-center justify-between">
-            <h2 id="payers" className="label">Who paid</h2>
+            <h2 id="payers" className="label">
+              Who paid
+            </h2>
             <span className="pill">Moderators only</span>
           </div>
           <ul className="dashed-list mt-1">

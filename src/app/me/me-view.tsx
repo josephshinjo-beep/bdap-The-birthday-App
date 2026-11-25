@@ -25,7 +25,7 @@ function Me({ session }: { session: Session }) {
       <div className="card flex items-center gap-3">
         <Avatar name={p.fullName} url={p.avatarUrl} size={56} />
         <div className="min-w-0">
-          <h1 className="a-h truncate text-[24px]">{p.fullName}</h1>
+          <h1 className="a-h truncate text-[24px] md:text-[30px]">{p.fullName}</h1>
           <p className="hint truncate">@{p.username}{session.email && <> · {session.email}</>}</p>
         </div>
       </div>

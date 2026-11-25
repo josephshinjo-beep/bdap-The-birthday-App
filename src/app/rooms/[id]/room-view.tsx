@@ -1,9 +1,9 @@
 "use client";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
-import { Avatar, BackLink, Countdown, DateBlock, EmptyState, ErrorNote, Loading, Page, TabPanel, Tabs, roleLabel } from "@/components/ui";
+import { Avatar, BackLink, Columns, Countdown, DateBlock, EmptyState, ErrorNote, Loading, Page, TabPanel, Tabs, roleLabel } from "@/components/ui";
 import { data } from "@/lib/data";
 import { daysBetween, nextBirthday, parseISODate, relativeDays, todayIST } from "@/lib/dates";
 import { useAsync } from "@/lib/use-async";
@@ -46,8 +46,11 @@ function RoomHome({ room, session }: { room: Room; session: Session }) {
   const approved = useMemo(() => (members.data ?? []).filter((m) => m.status === "approved"), [members.data]);
   const pendingCount = (members.data ?? []).filter((m) => m.status === "pending").length;
 
+  const loaded = !members.loading && !celebrations.loading;
+  const cels = celebrations.data ?? [];
+
   return (
-    <Page>
+    <Page size="wide">
       <div className="flex items-center justify-between gap-2">
         <BackLink href="/rooms">My rooms</BackLink>
         {isAdmin ? (
@@ -60,65 +63,76 @@ function RoomHome({ room, session }: { room: Room; session: Session }) {
         ) : null}
       </div>
       <div className="flex items-center justify-between gap-2">
-        <h1 className="a-h enter text-[24px]">{room.name}</h1>
+        <h1 className="a-h enter text-[24px] md:text-[34px]">{room.name}</h1>
         {members.data && <span className="pill">{approved.length} members</span>}
       </div>
 
-      <Tabs<Tab>
-        label="Room sections"
-        value={tab}
-        onChange={setTab}
-        tabs={[
-          { id: "upcoming", label: "Upcoming" },
-          { id: "members", label: "Members" },
-          { id: "me", label: "Me" },
-        ]}
-      />
+      <Columns
+        main={
+          <>
+            <Tabs<Tab>
+              label="Room sections"
+              value={tab}
+              onChange={setTab}
+              tabs={[
+                { id: "upcoming", label: "Upcoming" },
+                { id: "members", label: "Members" },
+                { id: "me", label: "Me" },
+              ]}
+            />
 
-      {tab === "upcoming" && (
-        <TabPanel id="upcoming">
-          {members.loading || celebrations.loading ? <Loading /> : <Upcoming room={room} members={approved} celebrations={celebrations.data ?? []} me={session.userId} />}
-        </TabPanel>
-      )}
-      {tab === "members" && <TabPanel id="members">{members.loading ? <Loading /> : <MemberList members={approved} me={session.userId} />}</TabPanel>}
-      {tab === "me" && (
-        <TabPanel id="me">
-          <MeTab room={room} session={session} />
-        </TabPanel>
-      )}
+            {tab === "upcoming" && (
+              <TabPanel id="upcoming">
+                {loaded ? <Upcoming room={room} members={approved} celebrations={cels} me={session.userId} /> : <Loading />}
+              </TabPanel>
+            )}
+            {tab === "members" && <TabPanel id="members">{members.loading ? <Loading /> : <MemberList members={approved} me={session.userId} />}</TabPanel>}
+            {tab === "me" && (
+              <TabPanel id="me">
+                <MeTab room={room} session={session} />
+              </TabPanel>
+            )}
+          </>
+        }
+        side={
+          /* Laptop sidebar: the secret card stays in view while you browse the room. */
+          <div className="hidden flex-col gap-5 lg:flex">
+            {loaded && <NextCard room={room} members={approved} celebrations={cels} me={session.userId} />}
+            {loaded && cels.length > 1 && (
+              <section className="card">
+                <h2 className="label">Also this week</h2>
+                <ul className="dashed-list mt-1">
+                  {cels.slice(1).map((c) => (
+                    <li key={c.id} className="py-2">
+                      <Link href={`/rooms/${room.id}/surprise/${c.id}`} className="flex items-center justify-between gap-2 text-sm font-bold text-plum hover:text-accent">
+                        A gift for {c.birthdayName.split(" ")[0]} <span className="pill">{relativeDays(daysBetween(todayIST(), c.date))}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {loaded && <p className="hint px-1">Only day and month are shown. On your own birthday, your room goes quiet for you.</p>}
+          </div>
+        }
+      />
     </Page>
   );
 }
 
 function Upcoming({ room, members, celebrations, me }: { room: Room; members: Member[]; celebrations: Celebration[]; me: string }) {
   const today = todayIST();
-  const next = celebrations[0];
   const list = members
     .map((m) => ({ m, date: nextBirthday(m.birthMonth, m.birthDay, today) }))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 12);
-  const nextOther = list.find((x) => x.m.userId !== me);
 
   return (
     <>
-      {next ? (
-        <section aria-labelledby="next-cel" className="relative flex flex-col gap-2.5 overflow-hidden rounded-[20px] bg-accent p-4 text-white">
-          <span className="pill pill-glass self-start">Top secret · {next.birthdayName.split(" ")[0]} can&apos;t see this</span>
-          <h2 id="next-cel" className="font-display text-2xl font-extrabold leading-[1.05] text-white">
-            {next.birthdayName.split(" ")[0]}&apos;s birthday is {relativeDays(daysBetween(today, next.date))}
-          </h2>
-          <Countdown date={next.date} tone="pink" />
-          <Link href={`/rooms/${room.id}/surprise/${next.id}`} className="btn-on-pink">
-            Open the surprise →
-          </Link>
-        </section>
-      ) : nextOther ? (
-        <section className="card flex flex-col gap-1">
-          <span className="label">Next birthday</span>
-          <b className="font-display text-xl text-plum">{nextOther.m.fullName}</b>
-          <p className="a-sub">{relativeDays(daysBetween(today, nextOther.date))}. The surprise opens a week before.</p>
-        </section>
-      ) : null}
+      {/* On laptops this card lives in the sidebar instead. */}
+      <div className="lg:hidden">
+        <NextCard room={room} members={members} celebrations={celebrations} me={me} />
+      </div>
 
       <h2 className="label">Coming up</h2>
       {list.length === 0 ? (
@@ -151,6 +165,40 @@ function Upcoming({ room, members, celebrations, me }: { room: Room; members: Me
         </ul>
       )}
     </>
+  );
+}
+
+/** The pink "next secret celebration" card (or the next birthday if none is this week). */
+function NextCard({ room, members, celebrations, me }: { room: Room; members: Member[]; celebrations: Celebration[]; me: string }) {
+  const headingId = useId();
+  const today = todayIST();
+  const next = celebrations[0];
+  if (next) {
+    const first = next.birthdayName.split(" ")[0];
+    return (
+      <section aria-labelledby={headingId} className="relative flex flex-col gap-2.5 overflow-hidden rounded-[20px] bg-accent p-4 text-white lg:gap-3.5 lg:p-6">
+        <span className="pill pill-glass self-start">Top secret · {first} can&apos;t see this</span>
+        <h2 id={headingId} className="font-display text-2xl font-extrabold leading-[1.05] text-white lg:text-[28px]">
+          {first}&apos;s birthday is {relativeDays(daysBetween(today, next.date))}
+        </h2>
+        <Countdown date={next.date} tone="pink" />
+        <Link href={`/rooms/${room.id}/surprise/${next.id}`} className="btn-on-pink">
+          Open the surprise →
+        </Link>
+      </section>
+    );
+  }
+  const other = members
+    .filter((m) => m.userId !== me)
+    .map((m) => ({ m, date: nextBirthday(m.birthMonth, m.birthDay, today) }))
+    .sort((a, b) => a.date.localeCompare(b.date))[0];
+  if (!other) return null;
+  return (
+    <section className="card flex flex-col gap-1">
+      <span className="label">Next birthday</span>
+      <b className="font-display text-xl text-plum">{other.m.fullName}</b>
+      <p className="a-sub">{relativeDays(daysBetween(today, other.date))}. The surprise opens a week before.</p>
+    </section>
   );
 }
 

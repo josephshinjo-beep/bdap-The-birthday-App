@@ -12,7 +12,7 @@ const STEPS = [
 export function HowItWorks() {
   const [open, setOpen] = useState<string | null>(null);
   return (
-    <ol className="grid grid-cols-2 gap-2">
+    <ol className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
       {STEPS.map((s) => {
         const on = open === s.k;
         return (
@@ -21,11 +21,11 @@ export function HowItWorks() {
               type="button"
               aria-pressed={on}
               onClick={() => setOpen(on ? null : s.k)}
-              className={`flex h-full w-full flex-col gap-1 rounded-[16px] border p-3 text-left transition-transform duration-150 hover:-translate-y-0.5 hover:-rotate-1 ${on ? "border-sun bg-sun" : "border-line bg-surface"}`}
+              className={`flex h-full w-full flex-col gap-1 rounded-[16px] border p-3 text-left lg:p-5 transition-transform duration-150 hover:-translate-y-0.5 hover:-rotate-1 ${on ? "border-sun bg-sun" : "border-line bg-surface"}`}
             >
               <span className={`font-mono text-[11px] ${on ? "text-plum" : "text-accent"}`}>{s.k}</span>
-              <b className="text-sm text-plum">{s.title}</b>
-              <span className={`text-xs ${on ? "text-plum" : "text-muted"}`}>{s.body}</span>
+              <b className="text-sm text-plum lg:text-base">{s.title}</b>
+              <span className={`text-xs lg:text-sm ${on ? "text-plum" : "text-muted"}`}>{s.body}</span>
             </button>
           </li>
         );
