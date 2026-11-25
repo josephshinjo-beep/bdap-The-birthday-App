@@ -1,0 +1,683 @@
+<title>bdap Blueprint</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: blueprint shell (tabs) around a clickable phone prototype; plan & architecture as readable doc sections */
+:root{
+  --bg:#f6f4fb; --surface:#ffffff; --ink:#1d1838; --muted:#605a7a; --line:#e2ddf0;
+  --accent:#ff4f7b; --accent-ink:#ffffff; --sun:#ffd23f; --mint:#2ec4a0; --sky:#4d8bff;
+  --chip:#efeaff;
+  /* the app inside the phone keeps one fixed, bright look in both themes */
+  --a-bg:#fff8ec; --a-ink:#221b3a; --a-muted:#6b6385; --a-card:#ffffff; --a-line:#efe3cf;
+  --a-pink:#ff4f7b; --a-sun:#ffd23f; --a-mint:#2ec4a0; --a-sky:#4d8bff; --a-plum:#2a1f4f;
+  --f-display:"Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --f-body:"DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141126; --surface:#1d1936; --ink:#f1eefc; --muted:#a9a2c8; --line:#2f2950;
+  --accent:#ff6b90; --accent-ink:#1a0f1e; --chip:#2a2450; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#141126; --surface:#1d1936; --ink:#f1eefc; --muted:#a9a2c8; --line:#2f2950;
+  --accent:#ff6b90; --accent-ink:#1a0f1e; --chip:#2a2450; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:28px 64px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(28px,4.4vw,44px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:26px;font-weight:700;margin-bottom:12px}
+h3{font-size:18px;font-weight:700}
+p{margin:0}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lede{color:var(--muted);max-width:62ch;margin-top:10px}
+header.top{display:flex;flex-direction:column;gap:8px;margin-bottom:22px}
+
+nav.tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:26px}
+nav.tabs a{font-weight:700;font-size:14px;color:var(--muted);text-decoration:none;padding:10px 14px;border-bottom:3px solid transparent;margin-bottom:-1px}
+nav.tabs a[aria-current="page"]{color:var(--ink);border-color:var(--accent)}
+nav.tabs a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+
+/* ---------- prototype layout ---------- */
+.proto{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:32px;align-items:start}
+.flow{display:flex;flex-direction:column;gap:18px;min-width:0}
+.flow-group h3{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:var(--f-body);margin-bottom:8px}
+.flow-list{display:flex;flex-direction:column;gap:4px;list-style:none;margin:0;padding:0}
+.flow-list button{width:100%;text-align:left;background:transparent;border:1px solid transparent;color:var(--ink);font:inherit;padding:9px 12px;border-radius:10px;cursor:pointer;display:grid;grid-template-columns:28px 1fr;gap:6px;align-items:baseline}
+.flow-list button:hover{background:var(--surface);border-color:var(--line)}
+.flow-list button[aria-pressed="true"]{background:var(--surface);border-color:var(--accent)}
+.flow-list .n{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.flow-list .t{font-weight:700}
+.flow-list .d{grid-column:2;font-size:13px;color:var(--muted)}
+.note{background:var(--chip);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--ink)}
+.note b{color:var(--accent)}
+
+.device{position:sticky;top:calc(env(safe-area-inset-top, 0px) + 16px);justify-self:center;width:100%;max-width:390px}
+.phone{width:100%;aspect-ratio:390/780;max-width:100%;border-radius:44px;background:#0f0c1f;padding:12px;box-shadow:0 30px 60px -30px rgba(30,20,70,.55)}
+.screen{position:relative;width:100%;height:100%;border-radius:34px;overflow:hidden;background:var(--a-bg);color:var(--a-ink)}
+.notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:110px;height:26px;border-radius:20px;background:#0f0c1f;z-index:20}
+.view{position:absolute;inset:0;overflow-y:auto;padding:46px 18px 22px;display:flex;flex-direction:column;gap:14px;scrollbar-width:none}
+.view::-webkit-scrollbar{display:none}
+.caption{text-align:center;font-size:13px;color:var(--muted);margin-top:12px}
+
+/* ---------- app (inside phone) ---------- */
+.a-top{display:flex;justify-content:space-between;align-items:center}
+.logo{font-family:var(--f-display);font-weight:800;font-size:22px;letter-spacing:-.03em;color:var(--a-plum)}
+.logo span{color:var(--a-pink)}
+.a-link{background:none;border:0;font:inherit;font-weight:700;color:var(--a-plum);cursor:pointer;font-size:14px}
+.back{background:none;border:0;font:inherit;color:var(--a-muted);cursor:pointer;padding:0;font-size:14px;align-self:flex-start}
+.a-h{font-family:var(--f-display);font-weight:800;font-size:28px;line-height:1.05;letter-spacing:-.02em;color:var(--a-plum)}
+.a-h em{font-style:normal;color:var(--a-pink)}
+.a-sub{font-size:14px;color:var(--a-muted)}
+.btn{font:inherit;font-weight:700;font-size:15px;border-radius:14px;padding:13px 16px;border:2px solid var(--a-plum);cursor:pointer;text-align:center}
+.btn.pri{background:var(--a-plum);color:#fff;box-shadow:0 4px 0 var(--a-pink)}
+.btn.pri:active{transform:translateY(3px);box-shadow:0 1px 0 var(--a-pink)}
+.btn.sec{background:#fff;color:var(--a-plum)}
+.btn.ok{background:var(--a-mint);border-color:var(--a-mint);color:#06281f}
+.btn.sm{padding:7px 10px;font-size:13px;border-radius:10px}
+.btn-row{display:flex;gap:8px}
+.btn-row .btn{flex:1}
+.card{background:var(--a-card);border:1px solid var(--a-line);border-radius:18px;padding:14px}
+.lbl{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--a-muted)}
+.field{display:flex;flex-direction:column;gap:5px}
+.field input,.field select{font:inherit;font-size:15px;color:var(--a-ink);background:#fff;border:2px solid var(--a-line);border-radius:12px;padding:11px 12px;width:100%}
+.field input:focus{border-color:var(--a-plum);outline:none}
+.hint{font-size:12px;color:var(--a-muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px;background:#f2ecff;color:var(--a-plum)}
+.pill.pink{background:#ffe3ea;color:#b0123e}
+.pill.mint{background:#d8f6ee;color:#0d6b55}
+.pill.sun{background:#fff1b8;color:#6b5200}
+
+.hero-art{position:relative;height:150px;border-radius:22px;background:var(--a-plum);overflow:hidden}
+.balloon{position:absolute;bottom:-30px;width:44px;height:54px;border-radius:50% 50% 48% 48%;animation:rise 7s ease-in-out infinite}
+.balloon::after{content:"";position:absolute;left:50%;top:100%;width:1px;height:40px;background:rgba(255,255,255,.5)}
+@keyframes rise{0%{transform:translateY(0)}50%{transform:translateY(-70px) rotate(4deg)}100%{transform:translateY(0)}}
+.hero-art .cake{position:absolute;left:16px;top:18px;color:#fff;font-family:var(--f-display);font-weight:800;font-size:20px;line-height:1.1;max-width:60%}
+.hero-art .cake small{display:block;font-family:var(--f-body);font-weight:500;font-size:12px;color:#cfc6f2;margin-top:6px}
+.steps{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.step{background:var(--a-card);border:1px solid var(--a-line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:transform .15s}
+.step:hover{transform:translateY(-2px) rotate(-1deg)}
+.step .k{font-family:var(--f-mono);font-size:11px;color:var(--a-pink)}
+.step b{font-size:14px;color:var(--a-plum)}
+.step p{font-size:12px;color:var(--a-muted)}
+.step.open{background:var(--a-sun);border-color:var(--a-sun)}
+.secret{background:#221b3a;color:#fff;border-radius:18px;padding:14px;display:flex;gap:12px;align-items:center}
+.secret .eye{width:40px;height:40px;flex:none;border-radius:50%;background:var(--a-pink);display:grid;place-items:center;font-weight:800;font-family:var(--f-display)}
+.secret p{font-size:13px;color:#d9d2f5}
+
+.code-boxes{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.code-boxes input{width:100%;aspect-ratio:1/1.2;font-family:var(--f-mono);font-size:22px;text-align:center;text-transform:uppercase;border:2px solid var(--a-line);border-radius:12px;background:#fff;color:var(--a-plum)}
+.code-boxes input:focus{border-color:var(--a-pink);outline:none}
+.room-chip{display:flex;gap:10px;align-items:center}
+.room-chip .av{width:42px;height:42px;border-radius:12px;background:var(--a-sun);display:grid;place-items:center;font-family:var(--f-display);font-weight:800;color:var(--a-plum)}
+
+.envelope{align-self:center;width:120px;height:84px;background:var(--a-sun);border-radius:10px;position:relative;margin-top:16px;animation:bob 2.4s ease-in-out infinite}
+.envelope::before{content:"";position:absolute;inset:0;clip-path:polygon(0 0,100% 0,50% 58%);background:#ffbf00;border-radius:10px}
+@keyframes bob{50%{transform:translateY(-8px) rotate(-3deg)}}
+.timeline{display:flex;flex-direction:column;gap:10px}
+.tl{display:flex;gap:10px;align-items:center;font-size:14px}
+.tl i{width:14px;height:14px;border-radius:50%;flex:none;background:var(--a-line);border:2px solid var(--a-line)}
+.tl.done i{background:var(--a-mint);border-color:var(--a-mint)}
+.tl.now i{background:#fff;border-color:var(--a-pink);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 6px rgba(255,79,123,.2)}}
+
+.a-tabs{display:flex;gap:4px;background:#f3eadb;border-radius:12px;padding:4px}
+.a-tabs button{flex:1;font:inherit;font-size:13px;font-weight:700;border:0;border-radius:9px;padding:8px 4px;background:transparent;color:var(--a-muted);cursor:pointer}
+.a-tabs button.on{background:#fff;color:var(--a-plum)}
+.next{background:var(--a-pink);color:#fff;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden}
+.next .big{font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1.05}
+.count{display:flex;gap:6px}
+.count div{background:rgba(255,255,255,.18);border-radius:10px;padding:6px 8px;text-align:center;min-width:52px}
+.count b{display:block;font-family:var(--f-mono);font-size:18px}
+.count span{font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.next .btn{background:#fff;color:var(--a-pink);border-color:#fff;box-shadow:none}
+.bd-list{display:flex;flex-direction:column}
+.bd{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--a-line)}
+.bd:last-child{border-bottom:0}
+.date{background:#fff;border:1px solid var(--a-line);border-radius:10px;text-align:center;padding:3px 0;line-height:1.1}
+.date b{display:block;font-family:var(--f-display);font-size:17px;color:var(--a-plum)}
+.date span{font-size:10px;font-weight:700;color:var(--a-pink);text-transform:uppercase}
+.bd .nm{font-weight:700;font-size:14px}
+.bd .nm small{display:block;font-weight:400;color:var(--a-muted);font-size:12px}
+
+.lock{position:absolute;inset:0;background:linear-gradient(160deg,#2a1f4f,#4b2a6e 60%,#ff4f7b);color:#fff;padding:60px 14px 20px;display:flex;flex-direction:column;gap:14px}
+.lock .clock{text-align:center;font-family:var(--f-display);font-size:64px;font-weight:700;line-height:1}
+.lock .day{text-align:center;font-size:14px;color:#e8defd;margin-top:-6px}
+.push{background:rgba(255,255,255,.92);color:var(--a-ink);border-radius:18px;padding:12px;display:grid;grid-template-columns:34px 1fr;gap:10px;cursor:pointer;text-align:left;border:0;font:inherit;animation:drop .6s cubic-bezier(.2,1.4,.5,1) both}
+.push.two{animation-delay:.35s;opacity:.9}
+@keyframes drop{from{transform:translateY(-40px);opacity:0}}
+.push .ic{width:34px;height:34px;border-radius:9px;background:var(--a-plum);color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:13px}
+.push b{font-size:13px}
+.push .meta{display:flex;justify-content:space-between;font-size:11px;color:var(--a-muted)}
+.push p{font-size:13px}
+
+.gift{align-self:center;width:170px;height:170px;position:relative;cursor:pointer;border:0;background:none;padding:0}
+.gift .box{position:absolute;left:15px;right:15px;bottom:0;height:110px;background:var(--a-pink);border-radius:10px}
+.gift .lid{position:absolute;left:5px;right:5px;top:30px;height:36px;background:#ff7a9b;border-radius:10px;transition:transform .5s cubic-bezier(.3,1.6,.5,1)}
+.gift .rib{position:absolute;left:50%;transform:translateX(-50%);width:22px;top:30px;bottom:0;background:var(--a-sun)}
+.gift .bow{position:absolute;left:50%;top:4px;transform:translateX(-50%);width:60px;height:30px}
+.gift .bow::before,.gift .bow::after{content:"";position:absolute;top:0;width:28px;height:28px;border:7px solid var(--a-sun);border-radius:50% 50% 0 50%}
+.gift .bow::before{left:0}.gift .bow::after{right:0;transform:scaleX(-1)}
+.gift.shake{animation:shake .4s}
+@keyframes shake{25%{transform:rotate(-7deg)}75%{transform:rotate(7deg)}}
+.gift.opened .lid,.gift.opened .bow{transform:translate(40px,-60px) rotate(25deg);opacity:0;transition:all .6s}
+.taps{text-align:center;font-size:13px;color:var(--a-muted)}
+.scratch{position:relative;border-radius:18px;overflow:hidden;background:#fff;border:2px dashed var(--a-pink);padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.scratch canvas.qr{width:150px;height:150px;image-rendering:pixelated}
+.scratch canvas.cover{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;transition:opacity .5s}
+.upi{font-family:var(--f-mono);font-size:13px;color:var(--a-plum)}
+.amt{font-family:var(--f-display);font-weight:800;font-size:26px;color:var(--a-plum)}
+.progress{height:10px;border-radius:999px;background:#f3eadb;overflow:hidden}
+.progress i{display:block;height:100%;width:44%;background:var(--a-mint);border-radius:999px;transition:width .6s}
+.check{display:flex;gap:8px;align-items:center;font-weight:700;font-size:14px}
+.check input{width:20px;height:20px;accent-color:#2ec4a0}
+.confetti{position:absolute;inset:0;pointer-events:none;z-index:30}
+
+.ticket{display:flex;background:var(--a-plum);color:#fff;border-radius:16px;overflow:hidden}
+.ticket .l{flex:1;padding:14px;border-right:2px dashed rgba(255,255,255,.3)}
+.ticket .code{font-family:var(--f-mono);font-size:26px;letter-spacing:.12em;color:var(--a-sun)}
+.ticket .r{display:grid;place-items:center;padding:0 14px}
+.ticket .r button{background:var(--a-sun);border:0;border-radius:10px;padding:8px 10px;font:inherit;font-weight:700;font-size:13px;color:var(--a-plum);cursor:pointer}
+.req{display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--a-line)}
+.req:last-child{border-bottom:0}
+.req .av{width:36px;height:36px;border-radius:50%;background:#e9e1ff;display:grid;place-items:center;font-weight:800;color:var(--a-plum);font-size:13px}
+.req .nm{font-weight:700;font-size:14px}
+.req .nm small{display:block;font-weight:400;font-size:12px;color:var(--a-muted)}
+.req .acts{display:flex;gap:4px}
+.toggle{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px;padding:6px 0}
+.sw{width:42px;height:24px;border-radius:999px;background:var(--a-mint);position:relative;flex:none;border:0;cursor:pointer}
+.sw::after{content:"";position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:right .2s}
+.sw[aria-checked="false"]{background:#d9d0c1}
+.sw[aria-checked="false"]::after{right:21px}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;font:inherit;font-size:13px;font-weight:700;border:2px solid var(--a-line);background:#fff;border-radius:10px;padding:8px;color:var(--a-muted);cursor:pointer}
+.seg button.on{border-color:var(--a-plum);color:var(--a-plum)}
+.danger{border-color:#ffc7d4;background:#fff5f7}
+.toast{position:absolute;left:14px;right:14px;bottom:18px;background:var(--a-plum);color:#fff;border-radius:14px;padding:11px 14px;font-size:14px;z-index:25;transform:translateY(140%);transition:transform .3s}
+.toast.show{transform:none}
+
+/* ---------- doc sections ---------- */
+.doc{display:flex;flex-direction:column;gap:34px;max-width:860px}
+.doc section{display:flex;flex-direction:column;gap:12px}
+.doc p,.doc li{max-width:68ch}
+.ms{display:flex;flex-direction:column;gap:14px}
+.mile{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px}
+.mile .tag{font-family:var(--f-mono);font-size:12px;color:var(--accent)}
+.mile .when{font-size:13px;color:var(--muted);margin-top:4px}
+.mile ul{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.mile .done-when{margin-top:10px;font-size:14px;color:var(--muted)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+code{font-family:var(--f-mono);font-size:.88em;background:var(--chip);padding:1px 5px;border-radius:5px;word-break:break-word}
+.diagram{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;overflow-x:auto}
+.qs{display:flex;flex-direction:column;gap:12px;padding-left:0;list-style:none;counter-reset:q}
+.qs li{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px 14px 52px;position:relative;counter-increment:q}
+.qs li::before{content:counter(q);position:absolute;left:16px;top:14px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:13px;display:grid;place-items:center}
+.qs b{display:block;margin-bottom:4px}
+.qs .why{color:var(--muted);font-size:14px}
+.qs .rec{font-size:14px;margin-top:6px}
+.qs .rec span{font-weight:700;color:var(--mint)}
+
+@media (max-width:860px){
+  .proto{grid-template-columns:1fr}
+  .device{position:static;order:-1}
+  .mile{grid-template-columns:1fr;gap:6px}
+}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Design review · before we build</span>
+    <h1>bdap: the secret birthday room for your class</h1>
+    <p class="lede">A clickable prototype of milestones 1 and 2, the build plan, the architecture, and the questions I need you to answer. Click through the phone: every button inside it works.</p>
+  </header>
+
+  <nav class="tabs" aria-label="Sections">
+    <a href="#prototype" data-tab="prototype">Prototype</a>
+    <a href="#plan" data-tab="plan">Plan</a>
+    <a href="#architecture" data-tab="architecture">Architecture</a>
+    <a href="#questions" data-tab="questions">Decisions</a>
+  </nav>
+
+  <!-- ================= PROTOTYPE ================= -->
+  <section id="tab-prototype" class="tab">
+    <div class="proto">
+      <div class="flow">
+        <div class="flow-group">
+          <h3>Milestone 1 · Student joins</h3>
+          <ul class="flow-list">
+            <li><button data-go="home"><span class="n">1</span><span class="t">Home</span><span class="d">What bdap is, how it works, two big buttons.</span></button></li>
+            <li><button data-go="code"><span class="n">2</span><span class="t">Enter room code</span><span class="d">6-character code from the class moderator.</span></button></li>
+            <li><button data-go="enrol"><span class="n">3</span><span class="t">Enrolment form</span><span class="d">Name, username, date of birth.</span></button></li>
+            <li><button data-go="wait"><span class="n">4</span><span class="t">Waiting for approval</span><span class="d">Request sits with the moderator.</span></button></li>
+            <li><button data-go="room"><span class="n">5</span><span class="t">The room</span><span class="d">Upcoming birthdays and the next secret plan.</span></button></li>
+          </ul>
+        </div>
+        <div class="flow-group">
+          <h3>Milestone 2 · Secret celebration</h3>
+          <ul class="flow-list">
+            <li><button data-go="notif"><span class="n">6</span><span class="t">Reminder notification</span><span class="d">Day before and on the day. Never sent to the birthday person.</span></button></li>
+            <li><button data-go="surprise"><span class="n">7</span><span class="t">Unwrap the UPI QR</span><span class="d">Tap the gift, scratch the card, pay, tick “I chipped in”.</span></button></li>
+          </ul>
+        </div>
+        <div class="flow-group">
+          <h3>Moderator</h3>
+          <ul class="flow-list">
+            <li><button data-go="create"><span class="n">8</span><span class="t">Create room</span><span class="d">Class name, UPI details, reminder times.</span></button></li>
+            <li><button data-go="mod"><span class="n">9</span><span class="t">Moderator dashboard</span><span class="d">Room code, join requests, members.</span></button></li>
+            <li><button data-go="edit"><span class="n">10</span><span class="t">Edit room</span><span class="d">Change UPI, amount, reminders, reset code.</span></button></li>
+          </ul>
+        </div>
+        <p class="note"><b>How to review:</b> click any screen on the left, or tap through inside the phone. Tell me what to change: wording, colours, button placement, missing screens. Nothing is built yet, so changes are cheap now.</p>
+      </div>
+
+      <div class="device">
+        <div class="phone"><div class="screen" id="screen">
+          <div class="notch"></div>
+          <canvas class="confetti" id="confetti"></canvas>
+          <div class="toast" id="toast"></div>
+
+          <!-- 1 HOME -->
+          <div class="view" data-view="home">
+            <div class="a-top"><span class="logo">bd<span>ap</span></span><button class="a-link" data-go="mod">Log in</button></div>
+            <div class="hero-art" aria-hidden="true">
+              <div class="cake">Never miss a classmate's birthday.<small>And never spoil the surprise.</small></div>
+              <div class="balloon" style="right:22px;background:#ff4f7b"></div>
+              <div class="balloon" style="right:70px;background:#ffd23f;animation-delay:-2s"></div>
+              <div class="balloon" style="right:118px;background:#2ec4a0;animation-delay:-4s"></div>
+            </div>
+            <button class="btn pri" data-go="code">Join your class room</button>
+            <button class="btn sec" data-go="create">Create a room for your class</button>
+            <span class="lbl">How it works · tap a card</span>
+            <div class="steps">
+              <div class="step" tabindex="0"><span class="k">01</span><b>Join with a code</b><p>Your class moderator shares a 6-letter room code.</p></div>
+              <div class="step" tabindex="0"><span class="k">02</span><b>Moderator lets you in</b><p>Only real classmates get approved.</p></div>
+              <div class="step" tabindex="0"><span class="k">03</span><b>Get a secret heads-up</b><p>A day before and on the day. The birthday person sees nothing.</p></div>
+              <div class="step" tabindex="0"><span class="k">04</span><b>Chip in with UPI</b><p>Unwrap the QR, pay any UPI app, tick done.</p></div>
+            </div>
+            <div class="secret"><div class="eye">sh</div><div><b>Built for surprises</b><p>When it's your birthday, your room goes quiet for you. Everyone else plans.</p></div></div>
+          </div>
+
+          <!-- 2 CODE -->
+          <div class="view" data-view="code" hidden>
+            <button class="back" data-go="home">← Back</button>
+            <h2 class="a-h">Got a <em>room code?</em></h2>
+            <p class="a-sub">Ask your class moderator. It looks like <span class="upi">K7P2QX</span>.</p>
+            <div class="code-boxes" id="codeBoxes">
+              <input id="c1" maxlength="1" aria-label="Code letter 1" value="K"><input id="c2" maxlength="1" aria-label="Code letter 2" value="7"><input id="c3" maxlength="1" aria-label="Code letter 3" value="P"><input id="c4" maxlength="1" aria-label="Code letter 4" value="2"><input id="c5" maxlength="1" aria-label="Code letter 5" value="Q"><input id="c6" maxlength="1" aria-label="Code letter 6" value="X">
+            </div>
+            <div class="card room-chip"><div class="av">CB</div><div><b>CSE-B · 2nd Year</b><div class="hint">41 members · Moderator: Aarav M.</div></div></div>
+            <button class="btn pri" data-go="enrol">This is my class →</button>
+            <p class="hint">Wrong room? Clear the boxes and try again. Codes are not case-sensitive.</p>
+          </div>
+
+          <!-- 3 ENROL -->
+          <div class="view" data-view="enrol" hidden>
+            <button class="back" data-go="code">← Back</button>
+            <h2 class="a-h">Tell your class <em>who you are</em></h2>
+            <div class="field"><label class="lbl" for="fname">Full name</label><input id="fname" value="Meera Nair"></div>
+            <div class="field"><label class="lbl" for="funame">Username</label><input id="funame" value="@meera.n"><span class="hint">Lowercase, numbers, dots. <span style="color:#0d6b55;font-weight:700">Available</span></span></div>
+            <div class="field"><label class="lbl" for="fdob">Date of birth</label><input id="fdob" type="date" value="2006-12-03"><span class="hint">Classmates only see 3 Dec, never the year.</span></div>
+            <button class="btn pri" data-go="wait">Send join request</button>
+          </div>
+
+          <!-- 4 WAIT -->
+          <div class="view" data-view="wait" hidden>
+            <div class="envelope" aria-hidden="true"></div>
+            <h2 class="a-h" style="text-align:center">Request sent to <em>Aarav</em></h2>
+            <p class="a-sub" style="text-align:center">You'll get in as soon as your moderator approves. We'll notify you.</p>
+            <div class="card timeline">
+              <div class="tl done"><i></i>Code checked · CSE-B</div>
+              <div class="tl done"><i></i>Details sent</div>
+              <div class="tl now"><i></i>Waiting for moderator</div>
+              <div class="tl"><i></i>Welcome to the room</div>
+            </div>
+            <button class="btn sec" data-go="room" data-confetti="1">Prototype only: simulate approval →</button>
+          </div>
+
+          <!-- 5 ROOM -->
+          <div class="view" data-view="room" hidden>
+            <div class="a-top"><span class="logo">bd<span>ap</span></span><span class="pill">CSE-B · 41</span></div>
+            <div class="a-tabs" role="tablist"><button class="on">Upcoming</button><button>Members</button><button>Me</button></div>
+            <div class="next">
+              <span class="pill" style="background:rgba(255,255,255,.2);color:#fff;align-self:flex-start">Top secret · Riya can't see this</span>
+              <div class="big">Riya's birthday is tomorrow</div>
+              <div class="count"><div><b>0</b><span>days</span></div><div><b id="hh">14</b><span>hrs</span></div><div><b id="mm">22</b><span>min</span></div><div><b id="ss">09</b><span>sec</span></div></div>
+              <button class="btn" data-go="surprise">Open the surprise →</button>
+            </div>
+            <span class="lbl">Coming up</span>
+            <div class="card bd-list">
+              <div class="bd"><div class="date"><b>27</b><span>Nov</span></div><div class="nm">Riya Sharma<small>@riya.s · plan is live</small></div><span class="pill pink">Tomorrow</span></div>
+              <div class="bd"><div class="date"><b>03</b><span>Dec</span></div><div class="nm">You<small>Your room goes quiet for you</small></div><span class="pill sun">That's you</span></div>
+              <div class="bd"><div class="date"><b>11</b><span>Dec</span></div><div class="nm">Kabir Rao<small>@kabir.r</small></div><span class="pill">16 days</span></div>
+              <div class="bd"><div class="date"><b>19</b><span>Dec</span></div><div class="nm">Ananya Iyer<small>@ananya.i</small></div><span class="pill">24 days</span></div>
+            </div>
+          </div>
+
+          <!-- 6 NOTIF -->
+          <div class="view" data-view="notif" hidden style="padding:0">
+            <div class="lock">
+              <div class="clock">18:00</div>
+              <div class="day">Wednesday, 26 November</div>
+              <button class="push" data-go="surprise"><span class="ic">bd</span><span><span class="meta"><b>bdap · CSE-B</b><span>now</span></span><p><b>Psst. Riya's birthday is tomorrow.</b> A gift is waiting for you to unwrap. Don't tell her.</p></span></button>
+              <button class="push two" data-go="surprise"><span class="ic">bd</span><span><span class="meta"><b>bdap · CSE-B</b><span>preview: on the day, 07:30</span></span><p><b>Today's the day!</b> 22 of 40 have chipped in. Wish Riya before class.</p></span></button>
+              <p style="font-size:12px;color:#e8defd;text-align:center;margin-top:auto">Riya gets none of these. Tap a notification.</p>
+            </div>
+          </div>
+
+          <!-- 7 SURPRISE -->
+          <div class="view" data-view="surprise" hidden>
+            <button class="back" data-go="room">← Room</button>
+            <h2 class="a-h">A gift for <em>Riya</em></h2>
+            <div id="giftStage" style="display:flex;flex-direction:column;gap:10px">
+              <button class="gift" id="gift" aria-label="Tap the gift to unwrap it"><span class="box"></span><span class="rib"></span><span class="lid"></span><span class="bow"></span></button>
+              <p class="taps" id="taps">Tap the gift 3 times to unwrap</p>
+            </div>
+            <div id="scratchStage" hidden style="display:flex;flex-direction:column;gap:12px">
+              <div class="scratch" id="scratch">
+                <span class="lbl">Scan with any UPI app</span>
+                <canvas class="qr" id="qr" width="29" height="29" aria-label="Sample UPI QR code"></canvas>
+                <span class="upi">aarav.m@okaxis</span>
+                <span class="amt">₹50</span>
+                <canvas class="cover" id="cover" aria-hidden="true"></canvas>
+              </div>
+              <button class="btn sec sm" id="revealAll" style="align-self:center">Reveal without scratching</button>
+              <button class="btn pri">Pay ₹50 with a UPI app</button>
+              <div class="card" style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;font-size:13px"><b>Class pool</b><span id="poolTxt">18 of 40 chipped in · ₹900</span></div>
+                <div class="progress"><i id="poolBar"></i></div>
+                <label class="check"><input type="checkbox" id="paid"> I've chipped in</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- 8 CREATE -->
+          <div class="view" data-view="create" hidden>
+            <button class="back" data-go="home">← Back</button>
+            <h2 class="a-h">Start a room for <em>your class</em></h2>
+            <div class="field"><label class="lbl" for="rname">Room name</label><input id="rname" value="CSE-B · 2nd Year"></div>
+            <div class="field"><label class="lbl" for="rupi">UPI ID that collects money</label><input id="rupi" value="aarav.m@okaxis"><span class="hint">We make the QR from this. Or upload your QR image instead.</span></div>
+            <div class="field"><label class="lbl">Amount per person</label><div class="seg" id="amtSeg"><button>₹20</button><button class="on">₹50</button><button>₹100</button><button>Any</button></div></div>
+            <div class="card"><span class="lbl">Secret reminders</span>
+              <div class="toggle">Day before, 6:00 PM<button class="sw" role="switch" aria-checked="true" aria-label="Day-before reminder"></button></div>
+              <div class="toggle">On the day, 7:30 AM<button class="sw" role="switch" aria-checked="true" aria-label="On-the-day reminder"></button></div>
+              <div class="toggle">A week before (to plan)<button class="sw" role="switch" aria-checked="false" aria-label="Week-before reminder"></button></div>
+            </div>
+            <button class="btn pri" data-go="mod" data-confetti="1">Create room</button>
+          </div>
+
+          <!-- 9 MOD -->
+          <div class="view" data-view="mod" hidden>
+            <div class="a-top"><span class="logo">bd<span>ap</span></span><button class="a-link" data-go="edit">Edit room</button></div>
+            <h2 class="a-h" style="font-size:24px">CSE-B · 2nd Year</h2>
+            <div class="ticket"><div class="l"><span class="lbl" style="color:#cfc6f2">Room code</span><div class="code">K7P2QX</div><span class="hint" style="color:#cfc6f2">Share in your class group</span></div><div class="r"><button id="copyCode">Copy</button></div></div>
+            <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Join requests</span><span class="pill pink" id="reqCount">3 new</span></div>
+              <div id="reqs">
+                <div class="req"><div class="av">MN</div><div class="nm">Meera Nair<small>@meera.n · 3 Dec</small></div><div class="acts"><button class="btn ok sm">Let in</button><button class="btn sec sm" aria-label="Decline Meera">✕</button></div></div>
+                <div class="req"><div class="av">VK</div><div class="nm">Vikram K.<small>@vik.k · 14 Feb</small></div><div class="acts"><button class="btn ok sm">Let in</button><button class="btn sec sm" aria-label="Decline Vikram">✕</button></div></div>
+                <div class="req"><div class="av">??</div><div class="nm">randomguy99<small>@rg99 · 1 Jan</small></div><div class="acts"><button class="btn ok sm">Let in</button><button class="btn sec sm" aria-label="Decline randomguy99">✕</button></div></div>
+              </div>
+            </div>
+            <div class="card" style="display:flex;justify-content:space-between;align-items:center"><div><span class="lbl">Members</span><div style="font-weight:700">41 approved</div></div><span class="pill mint">Co-mod: Sana</span></div>
+            <button class="btn sec" data-go="room">View room as a member</button>
+          </div>
+
+          <!-- 10 EDIT -->
+          <div class="view" data-view="edit" hidden>
+            <button class="back" data-go="mod">← Dashboard</button>
+            <h2 class="a-h" style="font-size:24px">Edit room</h2>
+            <div class="field"><label class="lbl" for="ename">Room name</label><input id="ename" value="CSE-B · 2nd Year"></div>
+            <div class="field"><label class="lbl" for="eupi">UPI ID</label><input id="eupi" value="aarav.m@okaxis"></div>
+            <div class="field"><label class="lbl" for="eamt">Amount per person (₹)</label><input id="eamt" type="number" value="50"></div>
+            <div class="field"><label class="lbl" for="ecomod">Co-moderator</label><select id="ecomod"><option>Sana Q. (@sana.q)</option><option>Kabir Rao (@kabir.r)</option></select><span class="hint">Runs things when it's your own birthday.</span></div>
+            <div class="card danger"><span class="lbl" style="color:#b0123e">Room code</span><p style="font-size:13px;margin:4px 0 8px">Make a new code if the old one leaked. Members already in stay in.</p><button class="btn sec sm" id="newCode">Make a new code</button></div>
+            <button class="btn pri" data-go="mod" data-toast="Room saved">Save changes</button>
+          </div>
+        </div></div>
+        <p class="caption" id="caption">Screen 1 of 10 · Home</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PLAN ================= -->
+  <section id="tab-plan" class="tab doc" hidden>
+    <section>
+      <span class="eyebrow">Plan</span>
+      <h2>Build in small, demo-able milestones</h2>
+      <p>Each milestone ends with something you can open on your phone and try with real classmates. We don't move on until you've approved the one before.</p>
+    </section>
+    <div class="ms">
+      <div class="mile"><div><div class="tag">M0</div><h3>Setup</h3><div class="when">~2–3 days</div></div>
+        <div><p>Approve this design, then set up the project skeleton.</p>
+          <ul><li>Repo structure, Next.js app, Supabase project, deploy a “hello” page to Vercel</li><li>Colours, fonts and buttons from this prototype turned into reusable components</li><li>Google sign-in through Supabase Auth, then a one-time profile step (name, username, DOB)</li><li>PWA shell: installable app, service worker, push permission prompt</li><li>Styling kept in one theme file so the new look you give later is a quick swap</li></ul>
+          <p class="done-when"><b>Done when:</b> a live URL shows the real home page.</p></div></div>
+      <div class="mile"><div><div class="tag">M1</div><h3>Rooms &amp; enrolment</h3><div class="when">~1–1.5 weeks</div></div>
+        <div><ul><li>Interactive home page with “How it works”</li><li>Moderator: create room → gets a 6-character code</li><li>Student: enter code → room preview → name, username, DOB → request sent</li><li>Moderator dashboard: let in / decline requests, live count</li><li>Waiting screen that switches to the room by itself once approved (realtime)</li><li>Room page: member list and upcoming birthdays (day + month only)</li><li>Edit room, make a new code, add a co-moderator</li></ul>
+          <p class="done-when"><b>Done when:</b> you create a room, 3 friends join, you approve 2 and decline 1, and the approved ones land in the room.</p></div></div>
+      <div class="mile"><div><div class="tag">M2</div><h3>Secret reminders &amp; UPI</h3><div class="when">~1–1.5 weeks</div></div>
+        <div><ul><li>Daily scheduled job finds birthdays tomorrow and today (India time)</li><li>Creates a “celebration” per birthday, visible to everyone in the room except the birthday person</li><li>Sends notifications: in-app feed + Web Push to the installed PWA / browser</li><li>Multiple UPI IDs per room with automatic rotation after a set number of payers (see Architecture)</li><li>Moderator picks the amount mode: fixed, suggested, or any amount</li><li>Surprise page: tap-to-unwrap gift → scratch card → UPI QR, UPI ID, amount, “Pay with UPI app” button</li><li>“I've chipped in” tick. Members see the pool total; moderator and co-moderator also see who paid. The birthday person sees none of it</li><li>Moderator's own birthday is handed to the co-moderator automatically</li></ul>
+          <p class="done-when"><b>Done when:</b> with a test birthday set to tomorrow, everyone but that person gets the 6 PM reminder and can unwrap the QR.</p></div></div>
+      <div class="mile"><div><div class="tag">Later</div><h3>Fun extras to pick from</h3><div class="when">your call</div></div>
+        <div><ul><li>Secret wish wall: everyone writes a note, revealed to the birthday person at midnight as a digital card</li><li>Gift poll: suggest and vote on what to buy with the pool</li><li>Birthday reveal page for the birthday person: confetti, the wishes, “your class chipped in ₹2,000”</li><li>Photo memories per celebration</li><li>WhatsApp share button for the room code</li><li>Install as an app on the phone home screen (PWA)</li></ul></div></div>
+    </div>
+
+    <section>
+      <h2>Screen and button map</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Screen</th><th>Main button (bottom, full width)</th><th>Other actions</th></tr></thead>
+        <tbody>
+          <tr><td>Home</td><td>Join your class room</td><td>Create a room · Log in (top right) · tap-to-flip “How it works” cards</td></tr>
+          <tr><td>Enter code</td><td>This is my class →</td><td>Back · room preview appears once the code is valid</td></tr>
+          <tr><td>Enrolment</td><td>Send join request</td><td>Live username availability check</td></tr>
+          <tr><td>Waiting</td><td>(none, it moves on by itself)</td><td>Cancel request</td></tr>
+          <tr><td>Room</td><td>Open the surprise →</td><td>Tabs: Upcoming / Members / Me</td></tr>
+          <tr><td>Surprise</td><td>Pay with a UPI app</td><td>Tap gift · scratch card · “I've chipped in” tick</td></tr>
+          <tr><td>Create room</td><td>Create room</td><td>Amount chips · reminder switches · upload QR</td></tr>
+          <tr><td>Mod dashboard</td><td>Let in (per request)</td><td>Copy code · Edit room (top right) · view as member</td></tr>
+          <tr><td>Edit room</td><td>Save changes</td><td>Make a new code · pick co-moderator</td></tr>
+        </tbody></table></div>
+      <p>Rule of thumb used everywhere: one dark main button per screen, at thumb height. Back links top left. Room-level settings top right.</p>
+    </section>
+  </section>
+
+  <!-- ================= ARCHITECTURE ================= -->
+  <section id="tab-architecture" class="tab doc" hidden>
+    <section>
+      <span class="eyebrow">Architecture</span>
+      <h2>One web app, one database, one daily job</h2>
+      <p>The stack is chosen to be free to run for a class, quick to build, and safe by default about who sees what.</p>
+    </section>
+    <div class="tbl"><table>
+      <thead><tr><th>Part</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Web app</td><td>Next.js (React) + Tailwind</td><td>Pages and server code in one project; works great on phones</td></tr>
+        <tr><td>Database &amp; login</td><td>Supabase (Postgres, Auth, Realtime, Storage)</td><td>Free tier; row-level security hides celebrations from the birthday person at the database level</td></tr>
+        <tr><td>Hosting</td><td>Vercel, with your domain's DNS kept on Cloudflare</td><td>Best Next.js support, zero adapter work. Cloudflare just points <code>bdap.yourdomain</code> at Vercel</td></tr>
+        <tr><td>Scheduled job</td><td>Supabase <code>pg_cron</code> + <code>pg_net</code> calling <code>/api/cron/reminders</code> with a secret</td><td>Fires at exact times (6:00 PM, 7:30 AM IST). Vercel's free cron only promises “within the hour”</td></tr>
+        <tr><td>Notifications</td><td>In-app feed (Supabase Realtime) + Web Push (VAPID) via a service worker in the PWA</td><td>Free. Works on Android Chrome, desktop, and iPhone once the PWA is added to the home screen (iOS 16.4+)</td></tr>
+        <tr><td>UPI QR</td><td>Generated from <code>upi://pay?pa=…&amp;pn=…&amp;am=50&amp;tn=Riya bday</code></td><td>Same link opens GPay/PhonePe/Paytm directly on phones</td></tr>
+      </tbody></table></div>
+
+    <section>
+      <h3>How the pieces talk</h3>
+      <div class="diagram"><pre class="mermaid">
+flowchart LR
+  S[Student phone] -->|pages| W[Next.js on Vercel]
+  M[Moderator phone] -->|pages| W
+  W -->|queries with user's login| DB[(Supabase Postgres)]
+  DB -->|realtime: request approved| S
+  C[Daily cron 6PM and 7:30AM IST] --> J[/api/cron/birthdays/]
+  J -->|find birthdays tomorrow / today| DB
+  J -->|everyone except birthday person| P[Web Push + in-app feed]
+  P --> S
+      </pre></div>
+    </section>
+
+    <section>
+      <h3>Data model</h3>
+      <div class="tbl"><table>
+        <thead><tr><th>Table</th><th>Key fields</th></tr></thead>
+        <tbody>
+          <tr><td><code>profiles</code></td><td>id, full_name, username (unique), dob, avatar</td></tr>
+          <tr><td><code>rooms</code></td><td>id, name, code (unique, 6 chars), amount_mode (fixed / suggested / any), amount, payers_per_upi (default 20), reminder settings, created_by</td></tr>
+          <tr><td><code>room_upi_accounts</code></td><td>id, room_id, upi_id, payee_name, owner_user_id (the member it belongs to), qr_image_url (optional), sort_order, active</td></tr>
+          <tr><td><code>memberships</code></td><td>room_id, user_id, role (moderator / co_moderator / member), status (pending / approved / declined)</td></tr>
+          <tr><td><code>celebrations</code></td><td>id, room_id, birthday_user_id, date, status (upcoming / live / done)</td></tr>
+          <tr><td><code>contributions</code></td><td>celebration_id, user_id, upi_account_id (which QR they were shown), amount, marked_paid_at</td></tr>
+          <tr><td><code>notifications</code></td><td>user_id, celebration_id, kind (day_before / on_day), sent_at, read_at</td></tr>
+          <tr><td><code>push_subscriptions</code></td><td>user_id, endpoint, keys</td></tr>
+        </tbody></table></div>
+    </section>
+
+    <section>
+      <h3>The secrecy rule</h3>
+      <p>The database itself refuses to show a celebration to its birthday person: a row-level security policy allows reading <code>celebrations</code> and <code>contributions</code> only if you're an approved member of the room <b>and</b> <code>birthday_user_id ≠ you</code>. Even a bug in the app can't leak the surprise. The notification job filters the same way.</p>
+      <p>When the moderator has the birthday, the QR switches to the co-moderator's UPI for that celebration, and the moderator is locked out of it like anyone else.</p>
+    </section>
+
+    <section>
+      <h3>UPI rotation</h3>
+      <p>The moderator adds 2–3 UPI IDs and links each to the member who owns it. When someone opens the surprise, the app assigns them a UPI ID and remembers it, so they always see the same QR:</p>
+      <ul><li>Skip any UPI ID owned by the birthday person (covers the moderator's own birthday)</li><li>Use the first remaining ID until it has <code>payers_per_upi</code> people assigned (moderator sets this, default 20), then move to the next</li><li>If every ID is full, keep filling the one with the fewest, and alert the moderator to add another</li></ul>
+      <p>A note on the 20 limit: the well-known NPCI limit of 20 UPI transfers a day applies to the <b>sender's</b> account, and I'm not sure there's a fixed cap on receiving. Since the cap is a setting the moderator controls, the app works either way.</p>
+    </section>
+
+    <section>
+      <h3>One honest limit about UPI</h3>
+      <p>Without a payment gateway (Razorpay etc., which needs a registered business), the app can't see whether someone actually paid. “I've chipped in” is self-reported; the moderator can cross-check against their UPI app. That's fine for a class project, and we can add a gateway later if needed.</p>
+    </section>
+  </section>
+
+  <!-- ================= QUESTIONS ================= -->
+  <section id="tab-questions" class="tab doc" hidden>
+    <section>
+      <span class="eyebrow">Agreed</span>
+      <h2>Decisions</h2>
+      <p>1 Google login via Supabase · 2 college first, no birth year shown · 3 in-app + Web Push, built as a PWA · 4 multiple UPI IDs with rotation, birthday person's ID skipped · 5 moderator sets amount mode · 6 multiple rooms per student · 7 pool total for members, who-paid for admins · 8 Next.js + Supabase, hosted on Vercel with Cloudflare DNS · 9 new look comes later; current style is a placeholder.</p>
+    </section>
+    <section><h2>Original questions</h2></section>
+    <ol class="qs">
+      <li><b>How should people log in?</b><span class="why">Username alone can't stop someone pretending to be you.</span><p class="rec"><span>My pick:</span> Google sign-in, with email one-time code as a backup. Students then fill name, username and DOB once.</p></li>
+      <li><b>Who are the users: school or college?</b><span class="why">Under-18s (especially under-13s) need extra care with names and birthdays.</span><p class="rec"><span>My pick:</span> design for college first; never show the birth year anywhere.</p></li>
+      <li><b>Which notifications do you want in M2?</b><span class="why">Browser push needs permission and works best if the site is “installed” on the phone.</span><p class="rec"><span>My pick:</span> in-app + browser push now, email as a fallback, WhatsApp later.</p></li>
+      <li><b>Where does the money go?</b><span class="why">The prototype sends it to the moderator's UPI. Another option: a chosen “treasurer” per celebration.</span><p class="rec"><span>My pick:</span> moderator's UPI by default, co-moderator's when it's the moderator's birthday.</p></li>
+      <li><b>Fixed amount or any amount?</b><p class="rec"><span>My pick:</span> moderator sets a suggested amount (₹50); people can change it.</p></li>
+      <li><b>Can one student be in more than one room?</b><span class="why">e.g. class room + hostel room + club.</span><p class="rec"><span>My pick:</span> yes, it costs little to support now and is hard to add later.</p></li>
+      <li><b>Should the room show the pool total to members?</b><p class="rec"><span>My pick:</span> show “18 of 40 chipped in”, but only the moderator sees who exactly.</p></li>
+      <li><b>Do you have a preferred tech stack, or what do you already know?</b><span class="why">If you want to learn while building, I'll pick something you can maintain.</span><p class="rec"><span>My pick:</span> Next.js + Supabase + Vercel, all free tiers.</p></li>
+      <li><b>Does this look and feel right?</b><span class="why">Colours, the playful tone, the gift + scratch-card reveal, button placement.</span><p class="rec"><span>Tell me:</span> anything you'd change on any screen.</p></li>
+    </ol>
+  </section>
+</div>
+
+<script>
+(function(){
+  const order=["home","code","enrol","wait","room","notif","surprise","create","mod","edit"];
+  const names={home:"Home",code:"Enter room code",enrol:"Enrolment form",wait:"Waiting for approval",room:"The room",notif:"Reminder notification",surprise:"Unwrap the UPI QR",create:"Create room",mod:"Moderator dashboard",edit:"Edit room"};
+  const views=[...document.querySelectorAll(".view")];
+  const caption=document.getElementById("caption");
+  function show(v){
+    views.forEach(el=>{el.hidden=el.dataset.view!==v; if(!el.hidden) el.scrollTop=0;});
+    document.querySelectorAll(".flow-list button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.go===v));
+    caption.textContent="Screen "+(order.indexOf(v)+1)+" of 10 · "+names[v];
+    if(v==="surprise") resetSurprise();
+  }
+  document.addEventListener("click",e=>{
+    const t=e.target.closest("[data-go]"); if(!t) return;
+    if(t.dataset.confetti) burst();
+    if(t.dataset.toast) toast(t.dataset.toast);
+    show(t.dataset.go);
+  });
+
+  /* tabs */
+  const tabs=["prototype","plan","architecture","questions"];
+  function route(){
+    const h=location.hash.slice(1); const cur=tabs.includes(h)?h:"prototype";
+    tabs.forEach(t=>{document.getElementById("tab-"+t).hidden=t!==cur;});
+    document.querySelectorAll("nav.tabs a").forEach(a=>a.toggleAttribute("aria-current",a.dataset.tab===cur)||a.dataset.tab===cur&&a.setAttribute("aria-current","page"));
+    document.querySelectorAll("nav.tabs a").forEach(a=>{ if(a.dataset.tab===cur) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  }
+  window.addEventListener("hashchange",route); route();
+
+  /* toast */
+  const tEl=document.getElementById("toast"); let tT;
+  function toast(m){tEl.textContent=m;tEl.classList.add("show");clearTimeout(tT);tT=setTimeout(()=>tEl.classList.remove("show"),1800);}
+
+  /* how-it-works cards */
+  document.querySelectorAll(".step").forEach(s=>{const f=()=>s.classList.toggle("open");s.addEventListener("click",f);s.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();f();}});});
+
+  /* code boxes */
+  const boxes=[...document.querySelectorAll("#codeBoxes input")];
+  boxes.forEach((b,i)=>{b.addEventListener("input",()=>{b.value=b.value.toUpperCase().replace(/[^A-Z0-9]/g,""); if(b.value&&boxes[i+1]) boxes[i+1].focus();});
+    b.addEventListener("keydown",e=>{if(e.key==="Backspace"&&!b.value&&boxes[i-1]) boxes[i-1].focus();});});
+
+  /* countdown */
+  let secs=14*3600+22*60+9;
+  setInterval(()=>{secs=Math.max(0,secs-1);const p=n=>String(n).padStart(2,"0");
+    document.getElementById("hh").textContent=p(Math.floor(secs/3600));document.getElementById("mm").textContent=p(Math.floor(secs%3600/60));document.getElementById("ss").textContent=p(secs%60);},1000);
+
+  /* room tabs, amount seg, switches */
+  document.querySelectorAll(".a-tabs button").forEach(b=>b.addEventListener("click",()=>{b.parentElement.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));toast(b.textContent+" tab: designed in M1");}));
+  document.querySelectorAll("#amtSeg button").forEach(b=>b.addEventListener("click",()=>b.parentElement.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b))));
+  document.querySelectorAll(".sw").forEach(s=>s.addEventListener("click",()=>s.setAttribute("aria-checked",s.getAttribute("aria-checked")!=="true")));
+
+  /* moderator requests */
+  const reqCount=document.getElementById("reqCount");
+  document.getElementById("reqs").addEventListener("click",e=>{
+    const b=e.target.closest("button"); if(!b) return; const row=b.closest(".req");
+    const ok=b.classList.contains("ok"); row.style.transition="opacity .3s";row.style.opacity="0";
+    setTimeout(()=>{row.remove();const n=document.querySelectorAll("#reqs .req").length;reqCount.textContent=n?n+" new":"All done";reqCount.className="pill "+(n?"pink":"mint");},300);
+    toast(ok?"Let in. They'll land in the room now.":"Declined. They won't be told why.");
+  });
+  document.getElementById("copyCode").addEventListener("click",()=>{try{navigator.clipboard.writeText("K7P2QX").then(()=>toast("Code copied"),()=>toast("Code: K7P2QX"));}catch(_){toast("Code: K7P2QX");}});
+  document.getElementById("newCode").addEventListener("click",()=>{const c=Array.from({length:6},()=>"ABCDEFGHJKMNPQRSTUVWXYZ23456789"[Math.floor(Math.random()*31)]).join("");toast("New code: "+c);});
+
+  /* fake QR */
+  (function(){const c=document.getElementById("qr"),x=c.getContext("2d"),N=29;x.fillStyle="#fff";x.fillRect(0,0,N,N);x.fillStyle="#2a1f4f";
+    let s=42;const r=()=>{s=(s*9301+49297)%233280;return s/233280;};
+    for(let i=0;i<N;i++)for(let j=0;j<N;j++) if(r()>.52) x.fillRect(i,j,1,1);
+    const finder=(a,b)=>{x.fillStyle="#fff";x.fillRect(a-1,b-1,9,9);x.fillStyle="#2a1f4f";x.fillRect(a,b,7,7);x.fillStyle="#fff";x.fillRect(a+1,b+1,5,5);x.fillStyle="#2a1f4f";x.fillRect(a+2,b+2,3,3);};
+    finder(0,0);finder(N-7,0);finder(0,N-7);})();
+
+  /* gift + scratch */
+  const gift=document.getElementById("gift"),taps=document.getElementById("taps"),gs=document.getElementById("giftStage"),ss=document.getElementById("scratchStage"),cover=document.getElementById("cover");
+  let tapN=0,cx,scratched=false;
+  function resetSurprise(){tapN=0;gift.classList.remove("opened");taps.textContent="Tap the gift 3 times to unwrap";gs.hidden=false;ss.hidden=true;}
+  gift.addEventListener("click",()=>{tapN++;gift.classList.remove("shake");void gift.offsetWidth;gift.classList.add("shake");
+    if(tapN<3){taps.textContent=["","Again!","One more…"][tapN];return;}
+    gift.classList.add("opened");burst();setTimeout(()=>{gs.hidden=true;ss.hidden=false;paintCover();},700);});
+  function paintCover(){scratched=false;const r=cover.getBoundingClientRect();cover.width=r.width;cover.height=r.height;cover.style.opacity=1;cover.style.pointerEvents="auto";
+    cx=cover.getContext("2d");cx.globalCompositeOperation="source-over";
+    const g=cx.createLinearGradient(0,0,r.width,r.height);g.addColorStop(0,"#ffd23f");g.addColorStop(1,"#ff9fb8");cx.fillStyle=g;cx.fillRect(0,0,r.width,r.height);
+    cx.fillStyle="rgba(42,31,79,.85)";cx.font="700 18px 'Bricolage Grotesque', sans-serif";cx.textAlign="center";cx.fillText("Scratch here",r.width/2,r.height/2-4);
+    cx.font="500 12px 'DM Sans', sans-serif";cx.fillText("the QR is hiding underneath",r.width/2,r.height/2+16);
+    cx.globalCompositeOperation="destination-out";}
+  let down=false;
+  const pos=e=>{const r=cover.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top];};
+  cover.addEventListener("pointerdown",e=>{down=true;cover.setPointerCapture(e.pointerId);dig(e);});
+  cover.addEventListener("pointermove",e=>{if(down)dig(e);});
+  cover.addEventListener("pointerup",()=>{down=false;check();});
+  function dig(e){const[a,b]=pos(e);cx.beginPath();cx.arc(a,b,20,0,Math.PI*2);cx.fill();}
+  function check(){if(scratched)return;const d=cx.getImageData(0,0,cover.width,cover.height).data;let clear=0;for(let i=3;i<d.length;i+=64) if(d[i]===0) clear++;
+    if(clear/(d.length/64)>.45) revealAll();}
+  function revealAll(){scratched=true;cover.style.opacity=0;cover.style.pointerEvents="none";}
+  document.getElementById("revealAll").addEventListener("click",revealAll);
+  document.getElementById("paid").addEventListener("change",e=>{const on=e.target.checked;document.getElementById("poolBar").style.width=on?"47.5%":"44%";
+    document.getElementById("poolTxt").textContent=on?"19 of 40 chipped in · ₹950":"18 of 40 chipped in · ₹900";if(on){burst();toast("Thanks! Riya will never know… until tomorrow.");}});
+
+  /* confetti */
+  const cf=document.getElementById("confetti"),fx=cf.getContext("2d");let parts=[],anim;
+  function burst(){if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;const r=cf.getBoundingClientRect();cf.width=r.width;cf.height=r.height;
+    const cols=["#ff4f7b","#ffd23f","#2ec4a0","#4d8bff","#2a1f4f"];
+    for(let i=0;i<90;i++)parts.push({x:r.width/2,y:r.height/3,vx:(Math.random()-.5)*9,vy:Math.random()*-9-2,c:cols[i%5],s:4+Math.random()*5,r:Math.random()*6,life:90});
+    cancelAnimationFrame(anim);(function step(){fx.clearRect(0,0,cf.width,cf.height);parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.3;p.r+=.2;p.life--;fx.save();fx.translate(p.x,p.y);fx.rotate(p.r);fx.fillStyle=p.c;fx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);fx.restore();});
+      parts=parts.filter(p=>p.life>0);if(parts.length)anim=requestAnimationFrame(step);else fx.clearRect(0,0,cf.width,cf.height);})();}
+
+  show("home");
+})();
+</script>
