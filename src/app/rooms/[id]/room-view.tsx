@@ -122,7 +122,7 @@ function Upcoming({ room, members, celebrations, me }: { room: Room; members: Me
           <div className="mt-4">
             <Countdown date={next.date} />
           </div>
-          <Link href={`/rooms/${room.id}/surprise/${next.id}`} className="btn mt-5 w-full bg-surface sm:w-auto">
+          <Link href={`/rooms/${room.id}/surprise/${next.id}`} className="btn mt-5 w-full btn-light sm:w-auto">
             Open the surprise →
           </Link>
         </section>

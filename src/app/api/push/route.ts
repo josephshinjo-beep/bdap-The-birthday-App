@@ -4,6 +4,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isAllowedPushEndpoint } from "@/lib/push";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { hasSupabase } from "@/lib/supabase/env";
 import { getServerSupabase } from "@/lib/supabase/server";
 
 const MAX_BODY = 4096;
@@ -22,6 +23,7 @@ async function readJson(request: NextRequest): Promise<Record<string, unknown> |
 }
 
 async function currentUser() {
+  if (!hasSupabase) return null;
   const supabase = await getServerSupabase();
   const { data } = await supabase.auth.getUser();
   return data.user;

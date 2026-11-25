@@ -17,6 +17,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Third-party agent skills and k6 scripts are not app code.
+    ".claude/**",
+    "loadtest/**",
   ]),
 ]);
 

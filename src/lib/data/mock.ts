@@ -224,12 +224,17 @@ function onChange(cb: () => void): Unsubscribe {
   };
 }
 
+// The demo user is per tab (sessionStorage), so two tabs can be two people.
+// localStorage keeps the last choice for new tabs.
 function currentUserId(): string | null {
   if (typeof window === "undefined") return null;
+  const tab = window.sessionStorage.getItem(USER_KEY);
+  if (tab !== null) return tab || null;
   return window.localStorage.getItem(USER_KEY);
 }
 
 export function setDemoUser(id: DemoUserId | null) {
+  window.sessionStorage.setItem(USER_KEY, id ?? "");
   if (id) window.localStorage.setItem(USER_KEY, id);
   else window.localStorage.removeItem(USER_KEY);
   window.dispatchEvent(new Event(EVENT));

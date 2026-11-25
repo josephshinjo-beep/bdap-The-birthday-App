@@ -34,7 +34,7 @@ export function CodeTicket({ code, roomName }: { code: string; roomName: string 
         {code}
       </p>
       <div className="mt-3 flex justify-center gap-2">
-        <button type="button" onClick={copy} className="btn btn-sm bg-surface">
+        <button type="button" onClick={copy} className="btn btn-sm btn-light">
           {copied ? "Copied ✓" : "Copy code"}
         </button>
         <button type="button" onClick={share} className="btn-ghost btn-sm">

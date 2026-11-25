@@ -121,7 +121,7 @@ export function PushPrompt({ variant = "banner" }: { variant?: "banner" | "setti
         <div className="min-w-0 flex-1">{body}</div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        {state === "off" && <button type="button" className="btn btn-sm bg-surface" disabled={busy} onClick={enable}>{busy ? "Turning on…" : "Turn on notifications"}</button>}
+        {state === "off" && <button type="button" className="btn btn-sm btn-light" disabled={busy} onClick={enable}>{busy ? "Turning on…" : "Turn on notifications"}</button>}
         {state === "on" && variant === "settings" && <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={disable}>Turn off on this device</button>}
         {variant === "banner" && (
           <button
