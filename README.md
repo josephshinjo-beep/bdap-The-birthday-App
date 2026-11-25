@@ -236,7 +236,7 @@ Each run:
 ### 1. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In the **SQL editor**, run the files in `supabase/migrations/` in order (or use `supabase db push` with the Supabase CLI). This creates the tables, security rules and functions, turns on Realtime, and creates the `upi-qr` storage bucket.
+2. In the **SQL editor**, run the three files in `supabase/migrations/` in order: `…_init.sql`, `…_hardening.sql`, then `…_grants.sql` (or use `supabase db push` with the Supabase CLI). This creates the tables, security rules and functions, turns on Realtime, and creates the `upi-qr` storage bucket.
 3. **Authentication → Providers → Google:** turn it on and paste a Google OAuth client ID and secret (from Google Cloud Console → APIs & Services → Credentials). In Google Cloud, add Supabase's callback URL (shown on that Supabase screen) as an authorised redirect URI.
 4. **Authentication → URL configuration:** set the Site URL to your domain, and add these redirect URLs:
    - `https://<your-domain>/auth/callback`
@@ -354,6 +354,7 @@ Ideas for after launch (the owner picks):
 
 | Problem | Fix |
 |---|---|
+| "permission denied for table …" | Run `supabase/migrations/20261126000000_grants.sql` in the SQL editor. |
 | Google login goes back to `/login?error=auth` | Check the redirect URLs in Supabase → Authentication → URL configuration, and that the Google provider is on. |
 | The app shows demo data in production | `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` is missing in Vercel. Redeploy after adding them. |
 | No push on iPhone | Install it first (Share → Add to Home Screen, iOS 16.4+), then turn notifications on from inside the installed app. |

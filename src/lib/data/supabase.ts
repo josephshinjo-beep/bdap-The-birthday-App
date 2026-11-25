@@ -105,10 +105,19 @@ export const supabaseApi: DataApi = {
   async saveProfile(input) {
     const id = await uid();
     const { data: { user } } = await sb().auth.getUser();
-    const { error } = await sb().from("profiles").upsert({
-      id, full_name: input.fullName.trim(), username: input.username.toLowerCase(), dob: input.dob,
+    const fields = {
+      full_name: input.fullName.trim(),
+      username: input.username.toLowerCase(),
+      dob: input.dob,
       avatar_url: (user?.user_metadata?.avatar_url as string) ?? null,
-    });
+    };
+    // Insert the first time, then update only the editable columns.
+    // (No upsert: that would also try to update `id`, which users may not change.)
+    const { data: existing, error: readError } = await sb().from("profiles").select("id").eq("id", id).maybeSingle();
+    if (readError) fail(readError);
+    const { error } = existing
+      ? await sb().from("profiles").update(fields).eq("id", id)
+      : await sb().from("profiles").insert({ id, ...fields });
     if (error) fail(error);
   },
 
