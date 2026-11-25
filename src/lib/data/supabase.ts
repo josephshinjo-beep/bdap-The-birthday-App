@@ -158,7 +158,7 @@ export const supabaseApi: DataApi = {
       p_remind_week_before: input.remindWeekBefore,
       p_remind_day_before: input.remindDayBefore,
       p_remind_on_day: input.remindOnDay,
-      p_upi_accounts: input.upiAccounts.map((a) => ({ upi_id: a.upiId, payee_name: a.payeeName, owner_user_id: a.ownerUserId ?? "", qr_image_url: a.qrImageUrl ?? "" })),
+      p_upi_accounts: input.upiAccounts.map((a) => ({ upi_id: a.upiId, payee_name: a.payeeName, owner_user_id: a.ownerUserId, qr_image_url: a.qrImageUrl ?? "" })),
     });
     if (error) fail(error);
     const roomId = data as string;

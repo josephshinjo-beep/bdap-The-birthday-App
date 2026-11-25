@@ -1,69 +1,65 @@
-import Image from "next/image";
+import Link from "next/link";
+import { HeroGift } from "./hero-gift";
+
+const STEPS = [
+  { n: "1", title: "Join with a code", body: "Your class rep shares a 6-letter room code. Type it in, add your name and birthday.", colour: "bg-sun" },
+  { n: "2", title: "The moderator lets you in", body: "Only people the moderator approves see the room. Strangers stay out.", colour: "bg-mint" },
+  { n: "3", title: "A secret heads-up", body: "The evening before a birthday, everyone gets a quiet reminder. Everyone except the birthday person.", colour: "bg-sky" },
+  { n: "4", title: "Chip in with UPI", body: "Unwrap the gift, scratch the card, pay from any UPI app. Watch the pool fill up.", colour: "bg-accent" },
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <main id="main" className="flex-1">
+      <section className="mx-auto grid max-w-5xl items-center gap-8 px-4 pb-14 pt-8 sm:px-6 md:grid-cols-[1.15fr_1fr] md:pt-16">
+        <div>
+          <p className="enter chip mb-4">🎂 Birthdays for college classes</p>
+          <h1 className="enter-2 font-display text-[2.6rem] font-extrabold leading-[1.02] sm:text-6xl">
+            Never miss a classmate&apos;s birthday. <span className="text-accent">They never see it coming.</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="enter-3 mt-5 max-w-lg text-lg text-muted">
+            bdap reminds your whole class the evening before, keeps it secret from the birthday person, and collects the gift money over UPI.
           </p>
+          <div className="enter-3 mt-7 flex flex-col gap-3 sm:flex-row">
+            <Link href="/join" className="btn text-lg">Join your class room</Link>
+            <Link href="/create" className="btn-ghost">Create a room for your class</Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <HeroGift />
+      </section>
+
+      <section aria-labelledby="how" className="border-y-2 border-ink bg-surface-2 py-14">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <h2 id="how" className="font-display text-3xl font-extrabold sm:text-4xl">How bdap works</h2>
+          <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {STEPS.map((s) => (
+              <li key={s.n} className="card p-5 transition-transform duration-200 hover:-translate-y-0.5">
+                <span className={`${s.colour} inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-ink font-display text-lg font-extrabold text-[#221b3a]`}>{s.n}</span>
+                <h3 className="mt-3 font-display text-xl font-bold">{s.title}</h3>
+                <p className="mt-1 text-muted">{s.body}</p>
+              </li>
+            ))}
+          </ol>
         </div>
-      </main>
-    </div>
+      </section>
+
+      <section aria-labelledby="privacy" className="mx-auto max-w-5xl px-4 py-14 sm:px-6">
+        <div className="card grid gap-6 bg-night p-6 text-white sm:grid-cols-[auto_1fr] sm:p-8" style={{ background: "var(--night)", borderColor: "var(--night)" }}>
+          <span aria-hidden="true" className="text-5xl">🤫</span>
+          <div>
+            <h2 id="privacy" className="font-display text-2xl font-extrabold sm:text-3xl">Built to keep the secret</h2>
+            <ul className="mt-3 space-y-2 text-white/85">
+              <li>• The birthday person never sees their own reminders, surprise page or pool.</li>
+              <li>• Classmates see your birthday as a day and month. Your birth year stays with you.</li>
+              <li>• Only the moderators see who has paid. Everyone else sees the total.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-line py-8 text-center text-sm text-muted">
+        bdap · made for classes that celebrate together · <Link href="/login" className="underline">Log in</Link>
+      </footer>
+    </main>
   );
 }

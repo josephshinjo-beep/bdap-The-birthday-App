@@ -466,7 +466,7 @@ export const mockApi: DataApi = {
     store.rooms.push(room);
     store.memberships.push({ roomId: room.id, userId: me.id, role: "moderator", status: "approved", requestedAt: new Date().toISOString() });
     input.upiAccounts.forEach((a, i) => {
-      store.upi.push({ id: uid("upi"), roomId: room.id, upiId: a.upiId.trim(), payeeName: a.payeeName.trim(), ownerUserId: a.ownerUserId ?? me.id, qrImageUrl: a.qrImageUrl, sortOrder: i, active: true });
+      store.upi.push({ id: uid("upi"), roomId: room.id, upiId: a.upiId.trim(), payeeName: a.payeeName.trim(), ownerUserId: a.ownerUserId, qrImageUrl: a.qrImageUrl, sortOrder: i, active: true });
     });
     persist(store);
     return delay({ roomId: room.id, code: room.code }, 300);

@@ -101,3 +101,49 @@ create policy upi_qr_insert on storage.objects for insert to authenticated
   with check (bucket_id = 'upi-qr' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy upi_qr_delete on storage.objects for delete to authenticated
   using (bucket_id = 'upi-qr' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ---------------------------------------------------------------------------
+-- 5. create_room: an explicit null owner stays null ("someone else, link later");
+--    a missing owner key still defaults to the creator.
+-- ---------------------------------------------------------------------------
+create or replace function public.create_room(
+  p_name text,
+  p_amount_mode public.amount_mode default 'suggested',
+  p_amount integer default 50,
+  p_payers_per_upi integer default 20,
+  p_remind_week_before boolean default false,
+  p_remind_day_before boolean default true,
+  p_remind_on_day boolean default true,
+  p_upi_accounts jsonb default '[]'::jsonb
+)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  v_id uuid;
+  v_acc jsonb;
+  v_i int := 0;
+begin
+  if auth.uid() is null then raise exception 'not_signed_in'; end if;
+  if not exists (select 1 from profiles where id = auth.uid()) then raise exception 'profile_missing'; end if;
+  if jsonb_array_length(coalesce(p_upi_accounts, '[]'::jsonb)) > 10 then raise exception 'invalid_input'; end if;
+
+  insert into rooms (name, code, amount_mode, amount, payers_per_upi,
+                     remind_week_before, remind_day_before, remind_on_day, created_by)
+  values (btrim(p_name), generate_room_code(), p_amount_mode,
+          case when p_amount_mode = 'any' then null else p_amount end,
+          p_payers_per_upi, p_remind_week_before, p_remind_day_before, p_remind_on_day, auth.uid())
+  returning id into v_id;
+
+  insert into memberships (room_id, user_id, role, status, decided_at, decided_by)
+  values (v_id, auth.uid(), 'moderator', 'approved', now(), auth.uid());
+
+  for v_acc in select * from jsonb_array_elements(coalesce(p_upi_accounts, '[]'::jsonb)) loop
+    insert into room_upi_accounts (room_id, upi_id, payee_name, owner_user_id, qr_image_url, sort_order)
+    values (v_id, btrim(v_acc->>'upi_id'), btrim(v_acc->>'payee_name'),
+            case when v_acc ? 'owner_user_id' then nullif(v_acc->>'owner_user_id', '')::uuid else auth.uid() end,
+            nullif(v_acc->>'qr_image_url', ''), v_i);
+    v_i := v_i + 1;
+  end loop;
+
+  return v_id;
+end;
+$$;

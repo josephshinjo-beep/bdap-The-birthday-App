@@ -16,7 +16,7 @@
   /* text */
   --ink: #221b3a;
   --muted: #6b6385;
-  --on-accent: #ffffff;
+  --on-accent: #221b3a; /* ink on pink = 5.2:1; white would be 3.1:1 */
 
   /* brand */
   --accent: #ff4f7b;

@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
+import { Header } from "@/components/header";
 import { Providers } from "@/components/providers";
 import { fontVariables } from "@/styles/fonts";
 import "./globals.css";
@@ -33,7 +35,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 btn btn-sm">
           Skip to content
         </a>
-        <Providers>{children}</Providers>
+        <Providers>
+          <Suspense fallback={<div className="h-[61px] border-b border-line" />}>
+            <Header />
+          </Suspense>
+          {children}
+        </Providers>
       </body>
     </html>
   );
