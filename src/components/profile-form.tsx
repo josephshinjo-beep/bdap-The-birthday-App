@@ -90,7 +90,7 @@ export function ProfileForm({
   };
 
   return (
-    <form onSubmit={submit} className="space-y-5" noValidate>
+    <form onSubmit={submit} className="flex flex-col gap-3.5" noValidate>
       <div>
         <label htmlFor={ids.name} className="label">Full name</label>
         <input
@@ -109,7 +109,7 @@ export function ProfileForm({
       <div>
         <label htmlFor={ids.user} className="label">Username</label>
         <div className="relative">
-          <span aria-hidden="true" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">@</span>
+          <span aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">@</span>
           <input
             id={ids.user}
             className="field pl-8"
@@ -126,7 +126,7 @@ export function ProfileForm({
         <p
           id={ids.userHint}
           aria-live="polite"
-          className={`mt-1 text-sm font-medium ${availability === "free" ? "text-ok" : availability === "taken" || availability === "invalid" ? "text-danger" : "text-muted"}`}
+          className={`mt-1 text-xs ${availability === "free" ? "font-bold text-ok" : availability === "taken" || availability === "invalid" ? "font-bold text-danger" : "text-muted"}`}
         >
           {userMsg[availability]}
         </p>
@@ -134,7 +134,7 @@ export function ProfileForm({
       <div>
         <label htmlFor={ids.dob} className="label">Date of birth</label>
         <input id={ids.dob} type="date" className="field" value={dob} max={today} min="1900-01-02" aria-describedby={ids.dobHint} onChange={(e) => setDob(e.target.value)} />
-        <p id={ids.dobHint} className="hint mt-1">🔒 Classmates only ever see the day and month, never the year.</p>
+        <p id={ids.dobHint} className="hint mt-1">Classmates only see the day and month, never the year.</p>
       </div>
       <ErrorNote>{error}</ErrorNote>
       <button type="submit" className="btn w-full" disabled={!canSubmit}>

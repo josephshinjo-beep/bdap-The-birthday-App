@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-/** The room code as a ticket, with Copy and Share. */
+/** The room code as a plum ticket with Copy (and Share). */
 export function CodeTicket({ code, roomName }: { code: string; roomName: string }) {
   const [copied, setCopied] = useState(false);
   const joinUrl = typeof window !== "undefined" ? `${window.location.origin}/join?code=${code}` : `/join?code=${code}`;
@@ -26,18 +26,19 @@ export function CodeTicket({ code, roomName }: { code: string; roomName: string 
   }
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border-2 border-ink bg-sun p-5 text-[#221b3a] shadow-pop">
-      <span aria-hidden="true" className="absolute -left-4 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full border-2 border-ink bg-bg" />
-      <span aria-hidden="true" className="absolute -right-4 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full border-2 border-ink bg-bg" />
-      <p className="text-center text-sm font-bold uppercase tracking-widest">Room code</p>
-      <p className="my-2 text-center font-mono text-4xl tracking-[0.3em] sm:text-5xl" aria-label={`Room code ${code.split("").join(" ")}`}>
-        {code}
-      </p>
-      <div className="mt-3 flex justify-center gap-2">
-        <button type="button" onClick={copy} className="btn btn-sm btn-light">
-          {copied ? "Copied ✓" : "Copy code"}
+    <div className="flex overflow-hidden rounded-[16px] bg-plum text-on-plum">
+      <div className="flex-1 border-r-2 border-dashed border-white/30 p-3.5">
+        <span className="label !text-plum-soft">Room code</span>
+        <p className="font-mono text-[26px] tracking-[0.12em] text-sun" aria-label={`Room code ${code.split("").join(" ")}`}>
+          {code}
+        </p>
+        <span className="hint !text-plum-soft">Share in your class group</span>
+      </div>
+      <div className="flex flex-col items-stretch justify-center gap-1.5 px-3.5">
+        <button type="button" onClick={copy} className="min-h-10 rounded-sm bg-sun px-3 text-[13px] font-bold text-plum">
+          {copied ? "Copied ✓" : "Copy"}
         </button>
-        <button type="button" onClick={share} className="btn-ghost btn-sm">
+        <button type="button" onClick={share} className="min-h-10 rounded-sm border-2 border-white/40 px-3 text-[13px] font-bold text-on-plum">
           Share
         </button>
       </div>

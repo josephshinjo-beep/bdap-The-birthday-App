@@ -93,7 +93,7 @@ export function PushPrompt({ variant = "banner" }: { variant?: "banner" | "setti
   const body =
     state === "ios-install" ? (
       <>
-        <p className="font-bold">Get birthday heads-ups on your iPhone</p>
+        <p className="font-bold text-plum">Get birthday heads-ups on your iPhone</p>
         <ol className="mt-1 list-decimal pl-5 text-sm">
           <li>Tap the Share button <span aria-hidden="true">⬆︎</span> in Safari.</li>
           <li>Choose <strong>Add to Home Screen</strong>.</li>
@@ -106,27 +106,27 @@ export function PushPrompt({ variant = "banner" }: { variant?: "banner" | "setti
     ) : state === "denied" ? (
       <p>Notifications are blocked for bdap. Turn them on in your browser&apos;s site settings, then come back.</p>
     ) : state === "on" ? (
-      <p className="font-bold">✓ Push notifications are on for this device.</p>
+      <p className="font-bold text-ok">✓ Push notifications are on for this device.</p>
     ) : (
       <>
-        <p className="font-bold">Want a nudge the evening before a birthday?</p>
+        <p className="font-bold text-plum">Want a nudge the evening before a birthday?</p>
         <p className="text-sm text-muted">We only send secret birthday heads-ups and room updates.</p>
       </>
     );
 
   return (
-    <div className={`rounded-3xl border-2 border-ink p-4 ${variant === "banner" ? "bg-sun text-[#221b3a]" : "bg-surface"}`}>
+    <div className={`card ${variant === "banner" ? "!border-sun !bg-[var(--pill-sun-bg)]" : ""}`}>
       <div className="flex items-start gap-3">
-        <span aria-hidden="true" className="text-2xl">🔔</span>
+        <span aria-hidden="true" className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[9px] bg-plum font-display text-[13px] font-extrabold text-white">bd</span>
         <div className="min-w-0 flex-1">{body}</div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        {state === "off" && <button type="button" className="btn btn-sm btn-light" disabled={busy} onClick={enable}>{busy ? "Turning on…" : "Turn on notifications"}</button>}
-        {state === "on" && variant === "settings" && <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={disable}>Turn off on this device</button>}
+        {state === "off" && <button type="button" className="btn btn-sm" disabled={busy} onClick={enable}>{busy ? "Turning on…" : "Turn on notifications"}</button>}
+        {state === "on" && variant === "settings" && <button type="button" className="btn-secondary btn-sm" disabled={busy} onClick={disable}>Turn off on this device</button>}
         {variant === "banner" && (
           <button
             type="button"
-            className="btn-ghost btn-sm"
+            className="btn-secondary btn-sm"
             onClick={() => {
               localStorage.setItem(DISMISS_KEY, "1");
               setDismissed(true);

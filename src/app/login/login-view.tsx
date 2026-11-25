@@ -34,13 +34,13 @@ export function LoginView() {
 
   return (
     <Page narrow>
-      <div className="card enter mt-6 p-6 text-center sm:p-8">
-        <div className="mx-auto w-fit float">
-          <GiftArt size={120} />
+      <div className="card enter mt-4 flex flex-col items-center gap-1 p-6 text-center">
+        <div className="float">
+          <GiftArt size={110} />
         </div>
-        <h1 className="mt-2 font-display text-3xl font-extrabold">Log in to bdap</h1>
-        <p className="mt-1 text-muted">Use your Google account. No passwords to remember.</p>
-        <button type="button" onClick={google} disabled={busy} className="btn mt-6 w-full btn-light">
+        <h1 className="a-h mt-3">Log in to <em>bdap</em></h1>
+        <p className="a-sub">Use your Google account. No passwords to remember.</p>
+        <button type="button" onClick={google} disabled={busy} className="btn-secondary mt-4 w-full">
           <svg aria-hidden="true" width="20" height="20" viewBox="0 0 48 48">
             <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
             <path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
@@ -53,12 +53,12 @@ export function LoginView() {
       </div>
 
       {dataMode === "mock" && (
-        <section aria-labelledby="demo" className="card mt-4 p-5">
-          <h2 id="demo" className="font-display text-lg font-bold">Demo mode</h2>
-          <p className="hint">Supabase isn&apos;t connected yet, so pick a sample user.</p>
+        <section aria-labelledby="demo" className="card">
+          <h2 id="demo" className="label">Demo mode</h2>
+          <p className="a-sub mt-1">Supabase isn&apos;t connected yet, so pick a sample user.</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {DEMO_USERS.map((u) => (
-              <button key={u.id} type="button" className="btn-ghost h-auto flex-col items-start py-2 text-left" onClick={() => setDemoUser(u.id as DemoUserId)}>
+              <button key={u.id} type="button" className="btn-secondary h-auto flex-col !items-start py-2 text-left" onClick={() => setDemoUser(u.id as DemoUserId)}>
                 <span>{u.label}</span>
                 <span className="text-xs font-medium text-muted">{u.hint}</span>
               </button>

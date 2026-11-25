@@ -1,64 +1,46 @@
 import Link from "next/link";
-import { HeroGift } from "./hero-gift";
-
-const STEPS = [
-  { n: "1", title: "Join with a code", body: "Your class rep shares a 6-letter room code. Type it in, add your name and birthday.", colour: "bg-sun" },
-  { n: "2", title: "The moderator lets you in", body: "Only people the moderator approves see the room. Strangers stay out.", colour: "bg-mint" },
-  { n: "3", title: "A secret heads-up", body: "The evening before a birthday, everyone gets a quiet reminder. Everyone except the birthday person.", colour: "bg-sky" },
-  { n: "4", title: "Chip in with UPI", body: "Unwrap the gift, scratch the card, pay from any UPI app. Watch the pool fill up.", colour: "bg-accent" },
-];
+import { HowItWorks } from "./home-steps";
 
 export default function Home() {
   return (
-    <main id="main" className="flex-1">
-      <section className="mx-auto grid max-w-5xl items-center gap-8 px-4 pb-14 pt-8 sm:px-6 md:grid-cols-[1.15fr_1fr] md:pt-16">
+    <main id="main" className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3.5 px-[18px] pb-28 pt-3">
+      <section aria-labelledby="hero" className="enter relative h-[180px] overflow-hidden rounded-xl bg-plum">
+        <h1 id="hero" className="absolute left-4 top-[18px] max-w-[62%] font-display text-[22px] font-extrabold leading-[1.1] text-white">
+          Never miss a classmate&apos;s birthday.
+          <small className="mt-1.5 block font-sans text-xs font-medium text-plum-soft">And never spoil the surprise.</small>
+        </h1>
+        <span aria-hidden="true" className="balloon" style={{ right: 22, background: "var(--accent)" }} />
+        <span aria-hidden="true" className="balloon" style={{ right: 70, background: "var(--sun)", animationDelay: "-2s" }} />
+        <span aria-hidden="true" className="balloon" style={{ right: 118, background: "var(--mint)", animationDelay: "-4s" }} />
+      </section>
+
+      <p className="enter-2 a-sub">
+        bdap reminds your class the evening before a birthday, keeps it secret from the birthday person, and collects the gift money over UPI.
+      </p>
+
+      <Link href="/join" className="btn enter-2">Join your class room</Link>
+      <Link href="/create" className="btn-secondary enter-3">Create a room for your class</Link>
+
+      <section aria-labelledby="how" className="mt-2 flex flex-col gap-2">
+        <h2 id="how" className="label">How it works · tap a card</h2>
+        <HowItWorks />
+      </section>
+
+      <section aria-labelledby="secret" className="flex items-center gap-3 rounded-lg bg-night p-3.5 text-white">
+        <span aria-hidden="true" className="grid h-10 w-10 flex-none place-items-center rounded-full bg-accent font-display font-extrabold">sh</span>
         <div>
-          <p className="enter chip mb-4">🎂 Birthdays for college classes</p>
-          <h1 className="enter-2 font-display text-[2.6rem] font-extrabold leading-[1.02] sm:text-6xl">
-            Never miss a classmate&apos;s birthday. <span className="text-accent">They never see it coming.</span>
-          </h1>
-          <p className="enter-3 mt-5 max-w-lg text-lg text-muted">
-            bdap reminds your whole class the evening before, keeps it secret from the birthday person, and collects the gift money over UPI.
-          </p>
-          <div className="enter-3 mt-7 flex flex-col gap-3 sm:flex-row">
-            <Link href="/join" className="btn text-lg">Join your class room</Link>
-            <Link href="/create" className="btn-ghost">Create a room for your class</Link>
-          </div>
-        </div>
-        <HeroGift />
-      </section>
-
-      <section aria-labelledby="how" className="border-y-2 border-ink bg-surface-2 py-14">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <h2 id="how" className="font-display text-3xl font-extrabold sm:text-4xl">How bdap works</h2>
-          <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((s) => (
-              <li key={s.n} className="card p-5 transition-transform duration-200 hover:-translate-y-0.5">
-                <span className={`${s.colour} inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-ink font-display text-lg font-extrabold text-[#221b3a]`}>{s.n}</span>
-                <h3 className="mt-3 font-display text-xl font-bold">{s.title}</h3>
-                <p className="mt-1 text-muted">{s.body}</p>
-              </li>
-            ))}
-          </ol>
+          <h2 id="secret" className="font-sans text-[15px] font-bold text-white">Built for surprises</h2>
+          <p className="text-[13px] text-plum-soft">When it&apos;s your birthday, your room goes quiet for you. Everyone else plans.</p>
         </div>
       </section>
 
-      <section aria-labelledby="privacy" className="mx-auto max-w-5xl px-4 py-14 sm:px-6">
-        <div className="card grid gap-6 bg-night p-6 text-white sm:grid-cols-[auto_1fr] sm:p-8" style={{ background: "var(--night)", borderColor: "var(--night)" }}>
-          <span aria-hidden="true" className="text-5xl">🤫</span>
-          <div>
-            <h2 id="privacy" className="font-display text-2xl font-extrabold sm:text-3xl">Built to keep the secret</h2>
-            <ul className="mt-3 space-y-2 text-white/85">
-              <li>• The birthday person never sees their own reminders, surprise page or pool.</li>
-              <li>• Classmates see your birthday as a day and month. Your birth year stays with you.</li>
-              <li>• Only the moderators see who has paid. Everyone else sees the total.</li>
-            </ul>
-          </div>
-        </div>
-      </section>
+      <ul className="card flex flex-col gap-1.5 text-[13px] text-muted">
+        <li><b className="text-plum">Your birth year stays private.</b> Classmates only see the day and month.</li>
+        <li><b className="text-plum">Only moderators see who paid.</b> Everyone else sees the total.</li>
+      </ul>
 
-      <footer className="border-t border-line py-8 text-center text-sm text-muted">
-        bdap · made for classes that celebrate together · <Link href="/login" className="underline">Log in</Link>
+      <footer className="mt-4 text-center text-xs text-muted">
+        bdap · made for classes that celebrate together
       </footer>
     </main>
   );

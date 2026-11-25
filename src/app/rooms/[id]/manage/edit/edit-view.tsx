@@ -74,18 +74,18 @@ function Edit({ room, members, upis, session, reloadUpis, reloadMembers }: { roo
   return (
     <Page narrow>
       <BackLink href={`/rooms/${room.id}/manage`}>Dashboard</BackLink>
-      <h1 className="font-display text-3xl font-extrabold">Edit room</h1>
+      <h1 className="a-h text-[24px]">Edit room</h1>
 
-      <form onSubmit={save} className="mt-6 space-y-6" noValidate>
+      <form onSubmit={save} className="flex flex-col gap-3.5" noValidate>
         <RoomSettingsFields value={settings} onChange={setSettings} />
         <ErrorNote>{error}</ErrorNote>
-        <button type="submit" className="btn w-full" disabled={saving}>{saving ? "Saving…" : saved ? "Saved ✓" : "Save settings"}</button>
+        <button type="submit" className="btn" disabled={saving}>{saving ? "Saving…" : saved ? "Saved ✓" : "Save changes"}</button>
         <p className="sr-only" aria-live="polite">{saved ? "Settings saved" : ""}</p>
       </form>
 
-      <section aria-labelledby="upis" className="mt-10 space-y-3">
-        <h2 id="upis" className="font-display text-xl font-bold">UPI IDs</h2>
-        <p className="hint">Payers fill these in order, {settings.payersPerUpi} per UPI ID. Paused IDs get no new payers.</p>
+      <section aria-labelledby="upis" className="mt-3 flex flex-col gap-2.5">
+        <h2 id="upis" className="label">UPI IDs</h2>
+        <p className="hint -mt-1.5">Payers fill these in order, {settings.payersPerUpi} per UPI ID. Paused IDs get no new payers.</p>
         {upis.map((u, i) => (
           <ExistingUpi key={u.id} roomId={room.id} account={u} index={i} owners={owners} onChanged={reloadUpis} />
         ))}
@@ -93,17 +93,17 @@ function Edit({ room, members, upis, session, reloadUpis, reloadMembers }: { roo
       </section>
 
       {isModerator && (
-        <section aria-labelledby="comods" className="mt-10">
-          <h2 id="comods" className="font-display text-xl font-bold">Co-moderators</h2>
-          <p className="hint">Co-moderators can let people in, see who paid and edit the room.</p>
-          <ul className="card mt-3 divide-y divide-line p-0">
-            {coMods.length === 0 && <li className="px-4 py-3 text-muted">No other members yet.</li>}
+        <section aria-labelledby="comods" className="card mt-3">
+          <h2 id="comods" className="label">Co-moderators</h2>
+          <p className="hint">Run things when it&apos;s your own birthday. They can let people in, see who paid and edit the room.</p>
+          <ul className="dashed-list mt-1">
+            {coMods.length === 0 && <li className="py-2.5 a-sub">No other members yet.</li>}
             {coMods.map((m) => (
-              <li key={m.userId} className="flex items-center justify-between gap-2 px-4 py-2">
-                <span className="font-bold">{m.fullName} <span className="font-normal text-muted">· {roleLabel(m.role)}</span></span>
+              <li key={m.userId} className="flex items-center justify-between gap-2 py-2">
+                <span className="text-sm font-bold text-ink">{m.fullName} <span className="font-normal text-muted">· {roleLabel(m.role)}</span></span>
                 <button
                   type="button"
-                  className="btn-ghost btn-sm"
+                  className="btn-secondary btn-sm"
                   onClick={async () => {
                     await data.setMemberRole(room.id, m.userId, m.role === "co_moderator" ? "member" : "co_moderator").catch((e: Error) => setError(e.message));
                     reloadMembers();
@@ -117,20 +117,20 @@ function Edit({ room, members, upis, session, reloadUpis, reloadMembers }: { roo
         </section>
       )}
 
-      <section aria-labelledby="code" className="mt-10 space-y-3">
-        <h2 id="code" className="font-display text-xl font-bold">Room code</h2>
+      <section aria-labelledby="code" className="card card-danger mt-3 flex flex-col gap-2">
+        <h2 id="code" className="label !text-danger">Room code</h2>
+        <p className="text-[13px]">Make a new code if the old one leaked. Members already in stay in.</p>
         {code && <CodeTicket code={code} roomName={room.name} />}
         {confirmCode ? (
-          <div className="card p-4">
-            <p className="font-bold">Make a new code?</p>
-            <p className="hint">The old code stops working. Everyone already in the room stays in.</p>
-            <div className="mt-3 flex gap-2">
+          <div className="flex flex-col gap-2">
+            <p className="text-[13px] font-bold">The old code stops working right away. Make a new one?</p>
+            <div className="flex gap-2">
               <button type="button" className="btn btn-sm" onClick={newCode}>Make a new code</button>
-              <button type="button" className="btn-ghost btn-sm" onClick={() => setConfirmCode(false)}>Cancel</button>
+              <button type="button" className="btn-secondary btn-sm" onClick={() => setConfirmCode(false)}>Cancel</button>
             </div>
           </div>
         ) : (
-          <button type="button" className="btn-ghost w-full" onClick={() => setConfirmCode(true)}>Make a new code</button>
+          <button type="button" className="btn-secondary btn-sm self-start" onClick={() => setConfirmCode(true)}>Make a new code</button>
         )}
       </section>
     </Page>
@@ -166,7 +166,7 @@ function ExistingUpi({ roomId, account, index, owners, onChanged }: { roomId: st
             Save UPI ID
           </button>
         )}
-        <button type="button" className="btn-ghost btn-sm" onClick={() => run({ active: !account.active })}>
+        <button type="button" className="btn-secondary btn-sm" onClick={() => run({ active: !account.active })}>
           {account.active ? "Pause this UPI ID" : "Turn back on"}
         </button>
         {state === "saved" && <span className="self-center text-sm font-bold text-ok" role="status">Saved ✓</span>}
@@ -182,7 +182,7 @@ function NewUpi({ roomId, owners, index, onAdded }: { roomId: string; owners: { 
   const [draft, setDraft] = useState<UpiDraft>(blank);
   const [error, setError] = useState<string | null>(null);
 
-  if (!open) return <button type="button" className="btn-ghost w-full" onClick={() => setOpen(true)}>+ Add a UPI ID</button>;
+  if (!open) return <button type="button" className="btn-secondary" onClick={() => setOpen(true)}>+ Add a UPI ID</button>;
   return (
     <div>
       <UpiFields draft={draft} onChange={setDraft} owners={owners} roomId={roomId} index={index} onRemove={() => setOpen(false)} />

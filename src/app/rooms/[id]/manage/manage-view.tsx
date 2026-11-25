@@ -70,41 +70,45 @@ function Manage({ room, session }: { room: Room; session: Session }) {
 
   return (
     <Page>
-      <BackLink href={`/rooms/${room.id}`}>{room.name}</BackLink>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="font-display text-3xl font-extrabold">Moderator dashboard</h1>
-        <div className="flex gap-2">
-          <Link href={`/rooms/${room.id}?as=member`} className="btn-ghost btn-sm">View as member</Link>
-          <Link href={`/rooms/${room.id}/manage/edit`} className="btn-ghost btn-sm">Edit room</Link>
-        </div>
+      <div className="flex items-center justify-between gap-2">
+        <BackLink href={`/rooms/${room.id}`}>Room</BackLink>
+        <Link href={`/rooms/${room.id}/manage/edit`} className="inline-flex min-h-11 items-center text-sm font-bold text-plum">Edit room</Link>
       </div>
+      <h1 className="a-h text-[24px]">{room.name}</h1>
       <p className="sr-only" aria-live="polite">{announce}</p>
 
-      <div className="mt-5">{room.code && <CodeTicket code={room.code} roomName={room.name} />}</div>
+      {room.code && <CodeTicket code={room.code} roomName={room.name} />}
 
-      <section aria-labelledby="requests" className="mt-8">
-        <h2 id="requests" className="font-display text-xl font-bold">
-          Join requests {pending.length > 0 && <span className="chip ml-1 bg-accent text-on-accent">{pending.length}</span>}
-        </h2>
+      <section aria-labelledby="requests" className="card">
+        <div className="flex items-center justify-between">
+          <h2 id="requests" className="label">Join requests</h2>
+          {pending.length > 0 && <span className="pill pill-pink">{pending.length} new</span>}
+        </div>
         {members.loading ? (
           <Loading />
         ) : pending.length === 0 ? (
-          <p className="mt-2 text-muted">No one waiting. Share the code to get your class in.</p>
+          <p className="a-sub mt-2">No one waiting. Share the code to get your class in.</p>
         ) : (
-          <ul className="mt-3 space-y-2">
+          <ul className="dashed-list">
             {pending.map((m) => (
-              <li key={m.userId} className="card pop-in flex flex-wrap items-center gap-3 p-4">
+              <li key={m.userId} className="pop-in grid grid-cols-[36px_1fr_auto] items-center gap-2.5 py-2.5">
                 <Avatar name={m.fullName} url={m.avatarUrl} />
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold">{m.fullName}</p>
-                  <p className="text-sm text-muted">@{m.username} · 🎂 {formatDayMonth(m.birthMonth, m.birthDay)}</p>
+                <div className="min-w-0 text-sm font-bold text-ink">
+                  <span className="block truncate">{m.fullName}</span>
+                  <small className="block text-xs font-normal text-muted">@{m.username} · {formatDayMonth(m.birthMonth, m.birthDay)}</small>
                 </div>
-                <div className="flex gap-2">
-                  <button type="button" className="btn btn-sm bg-mint" disabled={busy !== null} onClick={() => act(m.userId, () => data.decideRequest(room.id, m.userId, true), `${m.fullName} let in`)}>
+                <div className="flex gap-1">
+                  <button type="button" className="btn-ok btn-sm" disabled={busy !== null} onClick={() => act(m.userId, () => data.decideRequest(room.id, m.userId, true), `${m.fullName} let in`)}>
                     Let in
                   </button>
-                  <button type="button" className="btn-ghost btn-sm" disabled={busy !== null} onClick={() => act(m.userId, () => data.decideRequest(room.id, m.userId, false), `${m.fullName} declined`)}>
-                    Decline
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    aria-label={`Decline ${m.fullName}`}
+                    disabled={busy !== null}
+                    onClick={() => act(m.userId, () => data.decideRequest(room.id, m.userId, false), `${m.fullName} declined`)}
+                  >
+                    ✕
                   </button>
                 </div>
               </li>
@@ -114,28 +118,32 @@ function Manage({ room, session }: { room: Room; session: Session }) {
       </section>
 
       {(celebrations.data?.length ?? 0) > 0 && (
-        <section aria-labelledby="cels" className="mt-8">
-          <h2 id="cels" className="font-display text-xl font-bold">This week&apos;s celebrations</h2>
-          <ul className="mt-3 space-y-2">
-            {celebrations.data!.map((c) => (
-              <li key={c.id}>
-                <Link href={`/rooms/${room.id}/surprise/${c.id}`} className="card flex items-center justify-between p-4">
-                  <span>
-                    <span className="block font-bold">🎁 {c.birthdayName}</span>
-                    <span className="text-sm text-muted">{formatISODayMonth(c.date)} · see the pool and who paid</span>
-                  </span>
-                  <span aria-hidden="true">→</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+        <section aria-labelledby="cels" className="flex flex-col gap-2">
+          <h2 id="cels" className="label">This week&apos;s celebrations</h2>
+          {celebrations.data!.map((c) => (
+            <Link key={c.id} href={`/rooms/${room.id}/surprise/${c.id}`} className="card flex items-center justify-between gap-2">
+              <span>
+                <b className="block text-plum">A gift for {c.birthdayName}</b>
+                <span className="hint">{formatISODayMonth(c.date)} · see the pool and who paid</span>
+              </span>
+              <span aria-hidden="true" className="text-plum">→</span>
+            </Link>
+          ))}
         </section>
       )}
 
-      <section aria-labelledby="members" className="mt-8">
-        <h2 id="members" className="font-display text-xl font-bold">Members ({approved.length})</h2>
+      <section aria-labelledby="members" className="card">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 id="members" className="label">Members</h2>
+            <b className="text-plum">{approved.length} approved</b>
+          </div>
+          {approved.filter((m) => m.role === "co_moderator").slice(0, 1).map((m) => (
+            <span key={m.userId} className="pill pill-mint">Co-mod: {m.fullName.split(" ")[0]}</span>
+          ))}
+        </div>
         <ErrorNote>{error}</ErrorNote>
-        <ul className="card mt-3 divide-y divide-line p-0">
+        <ul className="dashed-list mt-1">
           {approved.map((m) => (
             <MemberRow
               key={m.userId}
@@ -149,6 +157,8 @@ function Manage({ room, session }: { room: Room; session: Session }) {
           ))}
         </ul>
       </section>
+
+      <Link href={`/rooms/${room.id}?as=member`} className="btn-secondary">View room as a member</Link>
     </Page>
   );
 }
@@ -173,31 +183,37 @@ function MemberRow({
   const canRole = isModerator && m.userId !== me && m.role !== "moderator";
 
   return (
-    <li className="px-4 py-3">
-      <div className="flex flex-wrap items-center gap-3">
+    <li className="py-2.5">
+      <div className="grid grid-cols-[36px_1fr_auto] items-center gap-2.5">
         <Avatar name={m.fullName} url={m.avatarUrl} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-bold">{m.fullName}{m.userId === me && " (you)"}</p>
-          <p className="text-sm text-muted">@{m.username} · 🎂 {formatDayMonth(m.birthMonth, m.birthDay)} · {roleLabel(m.role)}</p>
+        <div className="min-w-0 text-sm font-bold text-ink">
+          <span className="block truncate">{m.fullName}{m.userId === me && " (you)"}</span>
+          <small className="block truncate text-xs font-normal text-muted">@{m.username} · {formatDayMonth(m.birthMonth, m.birthDay)} · {roleLabel(m.role)}</small>
         </div>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex gap-1">
           {canRole && (
-            <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => onRole(m.role === "co_moderator" ? "member" : "co_moderator")}>
-              {m.role === "co_moderator" ? "Make member" : "Make co-moderator"}
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              disabled={busy}
+              aria-label={m.role === "co_moderator" ? `Make ${m.fullName} a member` : `Make ${m.fullName} co-moderator`}
+              onClick={() => onRole(m.role === "co_moderator" ? "member" : "co_moderator")}
+            >
+              {m.role === "co_moderator" ? "Make member" : "Co-mod"}
             </button>
           )}
           {canRemove && !confirm && (
-            <button type="button" className="min-h-10 px-3 text-sm font-bold text-danger" onClick={() => setConfirm(true)} aria-label={`Remove ${m.fullName}`}>
-              Remove
+            <button type="button" className="btn-secondary btn-sm" onClick={() => setConfirm(true)} aria-label={`Remove ${m.fullName}`}>
+              ✕
             </button>
           )}
         </div>
       </div>
       {confirm && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl bg-surface-2 p-3">
-          <span className="flex-1 text-sm font-medium">Remove {m.fullName} from the room?</span>
-          <button type="button" className="btn btn-sm bg-danger" disabled={busy} onClick={onRemove}>Remove</button>
-          <button type="button" className="btn-ghost btn-sm" onClick={() => setConfirm(false)}>Cancel</button>
+        <div className="card card-danger mt-2 flex flex-wrap items-center gap-2">
+          <span className="flex-1 text-[13px] font-bold">Remove {m.fullName} from the room?</span>
+          <button type="button" className="btn-secondary btn-sm !border-danger !text-danger" disabled={busy} onClick={onRemove}>Remove</button>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => setConfirm(false)}>Cancel</button>
         </div>
       )}
     </li>

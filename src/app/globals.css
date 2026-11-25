@@ -6,6 +6,8 @@
     background: var(--bg);
     color: var(--ink);
     font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.55;
     -webkit-tap-highlight-color: transparent;
   }
   body {
@@ -16,7 +18,9 @@
   h3 {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
+    line-height: 1.1;
     text-wrap: balance;
+    color: var(--plum);
   }
   :focus-visible {
     outline: 3px solid var(--sky);
@@ -30,172 +34,298 @@
 }
 
 @layer components {
-  /* One button pair for the whole app: .btn (primary) and .btn-ghost. */
-  .btn {
+  /* Page heading with a pink highlight: <h1 class="a-h">Got a <em>room code?</em></h1> */
+  .a-h {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 28px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--plum);
+  }
+  .a-h em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .a-sub {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  /* Buttons: one plum main button per screen, white secondary, mint "ok". */
+  .btn,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-ok,
+  .btn-on-pink,
+  .btn-light {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
     min-height: 48px;
-    padding: 0 1.25rem;
-    border-radius: 999px;
+    padding: 12px 16px;
+    border-radius: var(--radius-btn);
+    border: 2px solid var(--plum);
+    font: inherit;
     font-weight: 700;
-    background: var(--accent);
-    color: var(--on-accent);
-    border: 2px solid var(--ink);
-    box-shadow: var(--shadow-pop);
+    font-size: 15px;
+    text-align: center;
+    cursor: pointer;
     transition:
-      transform var(--dur-quick) var(--ease-pop),
+      transform var(--dur-quick) var(--ease-out),
       box-shadow var(--dur-quick) var(--ease-out),
       background var(--dur-quick) var(--ease-out);
   }
+  .btn {
+    background: var(--plum);
+    color: var(--on-plum);
+    box-shadow: var(--shadow-btn);
+  }
   .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 0 var(--ink);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 0 var(--accent);
   }
   .btn:active {
     transform: translateY(3px);
-    box-shadow: 0 1px 0 var(--ink);
+    box-shadow: var(--shadow-btn-press);
   }
-  .btn:disabled {
-    opacity: 0.55;
-    transform: none;
-    box-shadow: var(--shadow-pop);
-    cursor: not-allowed;
-  }
+  .btn-secondary,
   .btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    min-height: 48px;
-    padding: 0 1.25rem;
-    border-radius: 999px;
-    font-weight: 700;
-    color: var(--ink);
     background: var(--surface);
-    border: 2px solid var(--ink);
-    transition: transform var(--dur-quick) var(--ease-pop), background var(--dur-quick) var(--ease-out);
+    color: var(--plum);
   }
+  .btn-secondary:hover,
   .btn-ghost:hover {
-    transform: translateY(-2px);
-    background: var(--surface-2);
+    transform: translateY(-1px);
+    background: var(--bg);
   }
-  .btn-ghost:active {
-    transform: translateY(1px);
+  .btn-ok {
+    background: var(--mint);
+    border-color: var(--mint);
+    color: var(--mint-ink);
   }
-  /* Primary button on a bright card: always white with ink text. */
+  .btn-on-pink,
   .btn-light {
-    background: #ffffff;
-    color: #221b3a;
+    background: var(--surface);
+    border-color: var(--surface);
+    color: var(--accent);
+  }
+  .btn-light {
+    color: var(--plum);
+    border-color: var(--plum);
+  }
+  .btn-secondary:active,
+  .btn-ghost:active,
+  .btn-ok:active,
+  .btn-on-pink:active,
+  .btn-light:active {
+    transform: translateY(2px);
+  }
+  .btn:disabled,
+  .btn-secondary:disabled,
+  .btn-ghost:disabled,
+  .btn-ok:disabled,
+  .btn-on-pink:disabled,
+  .btn-light:disabled {
+    opacity: 0.5;
+    transform: none;
+    cursor: not-allowed;
   }
   .btn-sm {
     min-height: 40px;
-    padding: 0 0.9rem;
-    font-size: 0.9rem;
+    padding: 7px 12px;
+    font-size: 13px;
+    border-radius: var(--radius-sm);
+  }
+
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 44px;
+    align-self: flex-start;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .back:hover {
+    color: var(--plum);
   }
 
   .card {
     background: var(--surface);
-    border: 1.5px solid var(--line);
+    border: 1px solid var(--line);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-card);
+    padding: 14px;
+  }
+  .card-danger {
+    border-color: var(--danger-line);
+    background: var(--danger-bg);
   }
   a.card,
   button.card {
-    transition: transform var(--dur-base) var(--ease-pop);
+    display: block;
+    transition: transform var(--dur-quick) var(--ease-out);
   }
   a.card:hover,
   button.card:hover {
     transform: translateY(-2px);
   }
 
+  .label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  label.label {
+    margin-bottom: 5px;
+  }
   .field {
     width: 100%;
     min-height: 48px;
-    padding: 0.7rem 0.9rem;
-    border-radius: var(--radius-md);
-    border: 2px solid var(--line);
-    background: var(--surface);
+    padding: 11px 12px;
+    font: inherit;
+    font-size: 15px;
     color: var(--ink);
+    background: var(--surface);
+    border: 2px solid var(--line);
+    border-radius: var(--radius-md);
     transition: border-color var(--dur-quick) var(--ease-out);
   }
   .field:focus {
     outline: none;
-    border-color: var(--ink);
+    border-color: var(--plum);
   }
-  .label {
-    display: block;
-    font-weight: 700;
-    font-size: 0.95rem;
-    margin-bottom: 0.35rem;
+  .field[aria-invalid="true"] {
+    border-color: var(--accent);
   }
   .hint {
-    font-size: 0.85rem;
+    font-size: 12px;
     color: var(--muted);
   }
+
+  .pill,
   .chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.8rem;
+    gap: 6px;
+    font-size: 12px;
     font-weight: 700;
-    background: var(--surface-2);
-    color: var(--ink);
+    border-radius: 999px;
+    padding: 4px 10px;
+    background: var(--pill-bg);
+    color: var(--pill-ink);
+    white-space: nowrap;
+  }
+  .pill-pink {
+    background: var(--pill-pink-bg);
+    color: var(--pill-pink-ink);
+  }
+  .pill-mint {
+    background: var(--pill-mint-bg);
+    color: var(--pill-mint-ink);
+  }
+  .pill-sun {
+    background: var(--pill-sun-bg);
+    color: var(--pill-sun-ink);
+  }
+  .pill-glass {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+  }
+
+  /* Segmented choice (amount mode, amount chips). */
+  .seg {
+    display: flex;
+    gap: 6px;
+  }
+  .seg > * {
+    flex: 1;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    border: 2px solid var(--line);
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    padding: 8px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color var(--dur-quick) var(--ease-out);
+  }
+  .seg > [aria-pressed="true"],
+  .seg > .on,
+  .seg > label:has(input:checked) {
+    border-color: var(--plum);
+    color: var(--plum);
+  }
+  .seg > label:has(input:focus-visible) {
+    outline: 3px solid var(--sky);
+    outline-offset: 2px;
+  }
+
+  /* Dashed separators between list rows. */
+  .dashed-list > * + * {
+    border-top: 1px dashed var(--line);
   }
 }
 
-/* Motion: the hero enters once; small loops stay subtle. */
+/* Motion */
 @keyframes enter-up {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
-@keyframes float {
+@keyframes rise {
   0%,
   100% {
-    transform: translateY(0) rotate(-3deg);
+    transform: translateY(0);
   }
   50% {
-    transform: translateY(-10px) rotate(3deg);
+    transform: translateY(-70px) rotate(4deg);
+  }
+}
+@keyframes bob {
+  50% {
+    transform: translateY(-8px) rotate(-3deg);
+  }
+}
+@keyframes pulse-ring {
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 79, 123, 0.2);
   }
 }
 @keyframes shake {
-  0%,
-  100% {
-    transform: rotate(0);
+  25% {
+    transform: rotate(-7deg);
   }
-  20% {
-    transform: rotate(-9deg) scale(1.04);
+  75% {
+    transform: rotate(7deg);
   }
-  40% {
-    transform: rotate(8deg) scale(1.06);
-  }
-  60% {
-    transform: rotate(-6deg) scale(1.04);
-  }
-  80% {
-    transform: rotate(4deg);
+}
+@keyframes drop {
+  from {
+    transform: translateY(-40px);
+    opacity: 0;
   }
 }
 @keyframes pop-in {
-  0% {
+  from {
     opacity: 0;
-    transform: scale(0.85);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
+    transform: scale(0.92);
   }
 }
-@keyframes envelope-bob {
+@keyframes float {
   0%,
   100% {
     transform: translateY(0);
@@ -204,7 +334,7 @@
     transform: translateY(-8px);
   }
 }
-@keyframes pulse-dot {
+@keyframes dot {
   0%,
   100% {
     opacity: 0.35;
@@ -218,25 +348,48 @@
   animation: enter-up var(--dur-slow) var(--ease-out) both;
 }
 .enter-2 {
-  animation: enter-up var(--dur-slow) var(--ease-out) 90ms both;
+  animation: enter-up var(--dur-slow) var(--ease-out) 80ms both;
 }
 .enter-3 {
-  animation: enter-up var(--dur-slow) var(--ease-out) 180ms both;
-}
-.float {
-  animation: float 3.2s ease-in-out infinite;
+  animation: enter-up var(--dur-slow) var(--ease-out) 160ms both;
 }
 .shake {
-  animation: shake 420ms var(--ease-out);
+  animation: shake 400ms;
+}
+.bob {
+  animation: bob 2.4s ease-in-out infinite;
+}
+.pulse-ring {
+  animation: pulse-ring 1.2s infinite;
+}
+.drop-in {
+  animation: drop 600ms var(--ease-drop) both;
 }
 .pop-in {
   animation: pop-in var(--dur-base) var(--ease-pop) both;
 }
-.bob {
-  animation: envelope-bob 2.6s ease-in-out infinite;
+.float {
+  animation: float 3.2s ease-in-out infinite;
 }
 .pulse-dot {
-  animation: pulse-dot 1.4s ease-in-out infinite;
+  animation: dot 1.4s ease-in-out infinite;
+}
+.balloon {
+  position: absolute;
+  bottom: -30px;
+  width: 44px;
+  height: 54px;
+  border-radius: 50% 50% 48% 48%;
+  animation: rise 7s ease-in-out infinite;
+}
+.balloon::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.5);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,19 +1,21 @@
-// The bdap gift box, drawn in SVG with theme colours.
-export function GiftArt({ size = 160, open = false }: { size?: number; open?: boolean }) {
+// The bdap gift box, as in the blueprint: pink box, sun ribbon and bow.
+// When `open`, the lid and bow fly off.
+export function GiftArt({ size = 170, open = false }: { size?: number; open?: boolean }) {
+  const s = size / 170;
+  const fly = open ? "translate(40px,-60px) rotate(25deg)" : "none";
+  const lidStyle = { transform: fly, opacity: open ? 0 : 1, transition: "transform 600ms var(--ease-pop), opacity 600ms" };
   return (
-    <svg width={size} height={size} viewBox="0 0 160 160" aria-hidden="true">
-      <ellipse cx="80" cy="148" rx="52" ry="7" fill="var(--ink)" opacity="0.12" />
-      <rect x="28" y="70" width="104" height="74" rx="10" fill="var(--accent)" stroke="var(--ink)" strokeWidth="4" />
-      <rect x="72" y="70" width="16" height="74" fill="var(--sun)" stroke="var(--ink)" strokeWidth="4" />
-      <g style={{ transform: open ? "translate(0,-26px) rotate(-14deg)" : "none", transformOrigin: "30px 70px", transition: "transform 420ms var(--ease-pop)" }}>
-        <rect x="20" y="50" width="120" height="26" rx="8" fill="var(--accent)" stroke="var(--ink)" strokeWidth="4" />
-        <rect x="72" y="50" width="16" height="26" fill="var(--sun)" stroke="var(--ink)" strokeWidth="4" />
-        <path d="M80 50 C 60 20, 34 30, 48 46 C 56 54, 72 52, 80 50 Z" fill="var(--sun)" stroke="var(--ink)" strokeWidth="4" strokeLinejoin="round" />
-        <path d="M80 50 C 100 20, 126 30, 112 46 C 104 54, 88 52, 80 50 Z" fill="var(--sun)" stroke="var(--ink)" strokeWidth="4" strokeLinejoin="round" />
-      </g>
-      <circle cx="44" cy="96" r="4" fill="var(--sun)" />
-      <circle cx="116" cy="118" r="4" fill="var(--sun)" />
-      <circle cx="110" cy="90" r="3" fill="var(--surface)" />
-    </svg>
+    <span aria-hidden="true" className="relative block" style={{ width: size, height: size }}>
+    <span className="absolute left-0 top-0 block" style={{ width: 170, height: 170, transform: `scale(${s})`, transformOrigin: "top left" }}>
+      <span className="absolute bottom-0 left-[15px] right-[15px] h-[110px] rounded-sm bg-accent" />
+      <span className="absolute bottom-0 left-1/2 top-[30px] w-[22px] -translate-x-1/2 bg-sun" />
+      <span className="absolute left-[5px] right-[5px] top-[30px] h-9 rounded-sm bg-accent-soft" style={lidStyle} />
+      <span className="absolute left-1/2 top-[30px] h-9 w-[22px] -translate-x-1/2 bg-sun" style={lidStyle} />
+      <span className="absolute left-1/2 top-1 h-[30px] w-[60px] -translate-x-1/2" style={lidStyle}>
+        <span className="absolute left-0 top-0 h-7 w-7 border-[7px] border-sun" style={{ borderRadius: "50% 50% 0 50%" }} />
+        <span className="absolute right-0 top-0 h-7 w-7 -scale-x-100 border-[7px] border-sun" style={{ borderRadius: "50% 50% 0 50%" }} />
+      </span>
+    </span>
+    </span>
   );
 }

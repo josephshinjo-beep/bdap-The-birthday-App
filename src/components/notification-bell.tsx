@@ -70,14 +70,14 @@ export function NotificationBell() {
         aria-expanded={open}
         aria-controls="notification-panel"
         onClick={() => setOpen((o) => !o)}
-        className={`relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-full hover:bg-surface-2 ${wiggle ? "shake" : ""}`}
+        className={`relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-plum hover:bg-surface-2 ${wiggle ? "shake" : ""}`}
       >
         <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
           <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         </svg>
         {unread > 0 && (
-          <span aria-hidden="true" className="pop-in absolute right-0.5 top-0.5 min-w-5 rounded-full border-2 border-bg bg-accent px-1 text-center text-xs font-bold leading-4 text-on-accent">
+          <span aria-hidden="true" className="pop-in absolute right-0.5 top-0.5 min-w-5 rounded-full border-2 border-bg bg-accent px-1 text-center text-xs font-bold leading-4 text-white">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -85,9 +85,9 @@ export function NotificationBell() {
       {open && (
         <div ref={panel} id="notification-panel" className="card pop-in absolute right-0 top-12 z-40 w-[min(92vw,360px)] overflow-hidden p-0">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
-            <p className="font-display font-bold">Notifications</p>
+            <p className="font-display font-bold text-plum">Notifications</p>
             {unread > 0 && (
-              <button type="button" onClick={markAll} className="min-h-11 text-sm font-bold text-muted hover:text-ink">
+              <button type="button" onClick={markAll} className="min-h-11 text-sm font-bold text-muted hover:text-plum">
                 Mark all read
               </button>
             )}
@@ -108,7 +108,7 @@ export function NotificationBell() {
                   >
                     <span aria-hidden="true" className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${n.readAt ? "bg-transparent" : "bg-accent"}`} />
                     <span className="min-w-0">
-                      <span className="block font-bold">{n.title}</span>
+                      <span className="block text-sm font-bold text-plum">{n.title}</span>
                       <span className="block text-sm text-muted">{n.body}</span>
                       <span className="block text-xs text-muted">{timeAgo(n.createdAt)}{!n.readAt && <span className="sr-only">, unread</span>}</span>
                     </span>

@@ -23,12 +23,12 @@ function Onboarding({ session }: { session: Session }) {
 
   return (
     <Page narrow>
-      <div className="enter mt-4">
-        <p className="chip">One-time setup</p>
-        <h1 className="mt-3 font-display text-3xl font-extrabold">Tell your class who you are</h1>
-        <p className="mt-1 text-muted">This is how you show up in every room you join.</p>
+      <div className="enter flex flex-col gap-2">
+        <span className="pill pill-sun self-start">One-time setup</span>
+        <h1 className="a-h">Tell your class <em>who you are</em></h1>
+        <p className="a-sub">This is how you show up in every room you join.</p>
       </div>
-      <div className="card enter-2 mt-6 p-5 sm:p-6">
+      <div className="enter-2">
         <ProfileForm
           initial={{ fullName: session.suggestedName ?? "" }}
           submitLabel="Save and continue"

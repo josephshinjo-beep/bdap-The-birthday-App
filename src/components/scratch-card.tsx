@@ -95,7 +95,7 @@ export function ScratchCard({ children, onReveal, revealed: initiallyRevealed = 
 
   return (
     <div>
-      <div ref={wrapRef} className="relative overflow-hidden rounded-3xl border-2 border-ink bg-surface">
+      <div ref={wrapRef} className="relative overflow-hidden rounded-lg border-2 border-dashed border-accent bg-surface">
         <div aria-hidden={!revealed} className={revealed ? "pop-in" : ""}>
           {children}
         </div>
@@ -125,7 +125,7 @@ export function ScratchCard({ children, onReveal, revealed: initiallyRevealed = 
         )}
       </div>
       {!revealed && (
-        <button type="button" onClick={reveal} className="mt-3 min-h-11 w-full font-bold text-muted underline underline-offset-4 hover:text-ink">
+        <button type="button" onClick={reveal} className="btn-secondary btn-sm mx-auto mt-3 flex">
           Reveal without scratching
         </button>
       )}

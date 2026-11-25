@@ -17,7 +17,7 @@ export function CodeInput({ value, onChange, invalid = false, autoFocus = false 
   }
 
   return (
-    <div role="group" aria-label="Room code, 6 characters" className="flex justify-center gap-2">
+    <div role="group" aria-label="Room code, 6 characters" className="grid grid-cols-6 gap-1.5">
       {chars.map((c, i) => (
         <input
           key={i}
@@ -54,8 +54,8 @@ export function CodeInput({ value, onChange, invalid = false, autoFocus = false 
             } else if (e.key === "ArrowLeft" && i > 0) refs.current[i - 1]?.focus();
             else if (e.key === "ArrowRight" && i < 5) refs.current[i + 1]?.focus();
           }}
-          className={`h-14 w-11 rounded-2xl border-2 bg-surface text-center font-mono text-2xl uppercase text-ink transition-transform focus:-translate-y-0.5 focus:border-ink focus:outline-none sm:h-16 sm:w-13 ${
-            invalid ? "border-danger" : c ? "border-ink" : "border-line"
+          className={`aspect-[1/1.2] w-full rounded-md border-2 bg-surface text-center font-mono text-[22px] uppercase text-plum focus:border-accent focus:outline-none ${
+            invalid ? "border-accent" : "border-line"
           }`}
         />
       ))}

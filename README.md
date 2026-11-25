@@ -323,9 +323,9 @@ The flows themselves are easiest to check in mock mode with the demo users (see 
 
 ## Changing the look
 
-The current style is a placeholder until the final design arrives. Everything visual lives in two files:
+The app follows the design blueprint (`docs/blueprint.html`): a cream background, plum headings and main buttons with a pink drop shadow, sun/mint/pink accents, Bricolage Grotesque headings, DM Sans text and JetBrains Mono for codes. Like the blueprint, it keeps one bright look even when the phone is in dark mode. Everything visual lives in two files:
 
-- **`src/styles/theme.css`**: colours (light and dark), radii, shadows and motion timings, as CSS variables. Components only use the Tailwind names mapped from them (`bg-accent`, `text-ink`, `font-display`…).
+- **`src/styles/theme.css`**: colours, pill colours, radii, button shadows and motion timings, as CSS variables. Components only use the Tailwind names mapped from them (`bg-plum`, `text-accent`, `font-display`…), plus shared classes in `src/app/globals.css` (`.btn`, `.btn-secondary`, `.card`, `.pill`, `.label`, `.field`, `.seg`, `.a-h`).
 - **`src/styles/fonts.ts`**: the three font families (display, body, mono).
 
 Change the values there and the whole app follows. Animations respect "reduce motion" settings, and tap targets are at least 44px.

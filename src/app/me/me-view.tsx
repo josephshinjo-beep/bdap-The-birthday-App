@@ -20,24 +20,24 @@ function Me({ session }: { session: Session }) {
   const p = session.profile!;
 
   return (
-    <Page narrow>
+    <Page>
       <BackLink href="/rooms">My rooms</BackLink>
-      <div className="flex items-center gap-4">
-        <Avatar name={p.fullName} url={p.avatarUrl} size={64} />
-        <div>
-          <h1 className="font-display text-3xl font-extrabold">{p.fullName}</h1>
-          <p className="text-muted">@{p.username}{session.email && <> · {session.email}</>}</p>
+      <div className="card flex items-center gap-3">
+        <Avatar name={p.fullName} url={p.avatarUrl} size={56} />
+        <div className="min-w-0">
+          <h1 className="a-h truncate text-[24px]">{p.fullName}</h1>
+          <p className="hint truncate">@{p.username}{session.email && <> · {session.email}</>}</p>
         </div>
       </div>
 
-      <section aria-labelledby="notif" className="mt-8">
-        <h2 id="notif" className="mb-2 font-display text-xl font-bold">Notifications</h2>
+      <section aria-labelledby="notif" className="flex flex-col gap-2">
+        <h2 id="notif" className="label">Notifications</h2>
         <PushPrompt variant="settings" />
       </section>
 
-      <section aria-labelledby="profile" className="mt-8">
-        <h2 id="profile" className="mb-2 font-display text-xl font-bold">Profile</h2>
-        <div className="card p-5">
+      <section aria-labelledby="profile" className="flex flex-col gap-2">
+        <h2 id="profile" className="label">Profile</h2>
+        <div>
           <ProfileForm
             initial={{ fullName: p.fullName, username: p.username, dob: p.dob }}
             submitLabel={saved ? "Saved ✓" : "Save changes"}
@@ -52,7 +52,7 @@ function Me({ session }: { session: Session }) {
 
       <button
         type="button"
-        className="btn-ghost mt-8 w-full"
+        className="btn-secondary mt-2"
         onClick={async () => {
           await data.signOut();
           await refresh();

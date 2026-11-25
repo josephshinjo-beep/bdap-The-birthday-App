@@ -3,9 +3,9 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
-import { Avatar, BackLink, Countdown, EmptyState, ErrorNote, Loading, Page, TabPanel, Tabs, roleLabel } from "@/components/ui";
+import { Avatar, BackLink, Countdown, DateBlock, EmptyState, ErrorNote, Loading, Page, TabPanel, Tabs, roleLabel } from "@/components/ui";
 import { data } from "@/lib/data";
-import { daysBetween, formatDayMonth, formatISODayMonth, nextBirthday, relativeDays, todayIST } from "@/lib/dates";
+import { daysBetween, nextBirthday, parseISODate, relativeDays, todayIST } from "@/lib/dates";
 import { useAsync } from "@/lib/use-async";
 import type { Celebration, Member, Room, Session } from "@/lib/types";
 
@@ -26,7 +26,7 @@ function RoomLoader({ session }: { session: Session }) {
   if (!room.data || room.data.myStatus !== "approved") {
     return (
       <Page>
-        <EmptyState title="You're not in this room" action={<Link href="/join" className="btn">Join with a code</Link>}>
+        <EmptyState title="You're not in this room" action={<Link href="/join" className="btn w-full">Join with a code</Link>}>
           Ask the moderator for the room code.
         </EmptyState>
       </Page>
@@ -48,50 +48,39 @@ function RoomHome({ room, session }: { room: Room; session: Session }) {
 
   return (
     <Page>
-      <BackLink href="/rooms">My rooms</BackLink>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="enter font-display text-3xl font-extrabold">{room.name}</h1>
-          <p className="text-muted">{approved.length} members · {roleLabel(room.myRole)}</p>
-        </div>
-        {isAdmin && (
-          <Link href={`/rooms/${room.id}/manage`} className="btn-ghost btn-sm relative">
-            Manage room
-            {pendingCount > 0 && <span className="ml-1 rounded-full bg-accent px-2 text-xs text-on-accent">{pendingCount}<span className="sr-only"> join requests</span></span>}
+      <div className="flex items-center justify-between gap-2">
+        <BackLink href="/rooms">My rooms</BackLink>
+        {isAdmin ? (
+          <Link href={`/rooms/${room.id}/manage`} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-plum">
+            Manage
+            {pendingCount > 0 && <span className="pill pill-pink">{pendingCount} new<span className="sr-only"> join requests</span></span>}
           </Link>
-        )}
-        {viewAsMember && room.myRole !== "member" && (
-          <Link href={`/rooms/${room.id}/manage`} className="btn-ghost btn-sm">Back to moderator view</Link>
-        )}
+        ) : viewAsMember && room.myRole !== "member" ? (
+          <Link href={`/rooms/${room.id}/manage`} className="inline-flex min-h-11 items-center text-sm font-bold text-plum">Back to dashboard</Link>
+        ) : null}
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="a-h enter text-[24px]">{room.name}</h1>
+        {members.data && <span className="pill">{approved.length} members</span>}
       </div>
 
-      <div className="mt-5">
-        <Tabs<Tab>
-          label="Room sections"
-          value={tab}
-          onChange={setTab}
-          tabs={[
-            { id: "upcoming", label: "Upcoming" },
-            { id: "members", label: "Members" },
-            { id: "me", label: "Me" },
-          ]}
-        />
-      </div>
+      <Tabs<Tab>
+        label="Room sections"
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: "upcoming", label: "Upcoming" },
+          { id: "members", label: "Members" },
+          { id: "me", label: "Me" },
+        ]}
+      />
 
       {tab === "upcoming" && (
         <TabPanel id="upcoming">
-          {members.loading || celebrations.loading ? (
-            <Loading />
-          ) : (
-            <Upcoming room={room} members={approved} celebrations={celebrations.data ?? []} me={session.userId} />
-          )}
+          {members.loading || celebrations.loading ? <Loading /> : <Upcoming room={room} members={approved} celebrations={celebrations.data ?? []} me={session.userId} />}
         </TabPanel>
       )}
-      {tab === "members" && (
-        <TabPanel id="members">
-          {members.loading ? <Loading /> : <MemberList members={approved} me={session.userId} />}
-        </TabPanel>
-      )}
+      {tab === "members" && <TabPanel id="members">{members.loading ? <Loading /> : <MemberList members={approved} me={session.userId} />}</TabPanel>}
       {tab === "me" && (
         <TabPanel id="me">
           <MeTab room={room} session={session} />
@@ -109,73 +98,73 @@ function Upcoming({ room, members, celebrations, me }: { room: Room; members: Me
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 12);
   const nextOther = list.find((x) => x.m.userId !== me);
-  const meSoon = list.find((x) => x.m.userId === me && daysBetween(today, x.date) <= 7);
 
   return (
-    <div className="space-y-5">
+    <>
       {next ? (
-        <section aria-labelledby="next-cel" className="relative overflow-hidden rounded-3xl border-2 border-ink bg-accent p-5 text-[#221b3a] shadow-pop sm:p-6">
-          <span aria-hidden="true" className="float absolute -right-3 -top-3 text-7xl">🎁</span>
-          <p className="text-sm font-bold uppercase tracking-widest">Next secret celebration</p>
-          <h2 id="next-cel" className="mt-1 font-display text-3xl font-extrabold">{next.birthdayName}</h2>
-          <p className="font-medium">{formatISODayMonth(next.date)} · {relativeDays(daysBetween(today, next.date))}</p>
-          <div className="mt-4">
-            <Countdown date={next.date} />
-          </div>
-          <Link href={`/rooms/${room.id}/surprise/${next.id}`} className="btn mt-5 w-full btn-light sm:w-auto">
+        <section aria-labelledby="next-cel" className="relative flex flex-col gap-2.5 overflow-hidden rounded-[20px] bg-accent p-4 text-white">
+          <span className="pill pill-glass self-start">Top secret · {next.birthdayName.split(" ")[0]} can&apos;t see this</span>
+          <h2 id="next-cel" className="font-display text-2xl font-extrabold leading-[1.05] text-white">
+            {next.birthdayName.split(" ")[0]}&apos;s birthday is {relativeDays(daysBetween(today, next.date))}
+          </h2>
+          <Countdown date={next.date} tone="pink" />
+          <Link href={`/rooms/${room.id}/surprise/${next.id}`} className="btn-on-pink">
             Open the surprise →
           </Link>
         </section>
       ) : nextOther ? (
-        <section className="card p-5">
-          <p className="text-sm font-bold uppercase tracking-widest text-muted">Next birthday</p>
-          <p className="mt-1 font-display text-2xl font-extrabold">{nextOther.m.fullName}</p>
-          <p className="text-muted">{formatISODayMonth(nextOther.date)} · {relativeDays(daysBetween(today, nextOther.date))}. The surprise opens a week before.</p>
+        <section className="card flex flex-col gap-1">
+          <span className="label">Next birthday</span>
+          <b className="font-display text-xl text-plum">{nextOther.m.fullName}</b>
+          <p className="a-sub">{relativeDays(daysBetween(today, nextOther.date))}. The surprise opens a week before.</p>
         </section>
       ) : null}
 
-      {meSoon && (
-        <p className="card bg-surface-2 p-4 font-medium">🤫 Your birthday is {relativeDays(daysBetween(today, meSoon.date))}. Your room goes quiet for you, so no peeking.</p>
+      <h2 className="label">Coming up</h2>
+      {list.length === 0 ? (
+        <EmptyState title="No birthdays yet">Once classmates join, their birthdays show up here.</EmptyState>
+      ) : (
+        <ul className="card dashed-list py-0">
+          {list.map(({ m, date }) => {
+            const days = daysBetween(today, date);
+            const isMe = m.userId === me;
+            const { month, day } = parseISODate(date);
+            return (
+              <li key={m.userId} className="grid grid-cols-[44px_1fr_auto] items-center gap-2.5 py-2.5">
+                <DateBlock month={month} day={day} />
+                <div className="min-w-0 text-sm font-bold text-ink">
+                  <span className="block truncate">{isMe ? "You" : m.fullName}</span>
+                  <small className="block truncate text-xs font-normal text-muted">{isMe ? "Your room goes quiet for you" : `@${m.username}`}</small>
+                </div>
+                {isMe ? (
+                  <span className="pill pill-sun">That&apos;s you</span>
+                ) : days === 0 ? (
+                  <span className="pill pill-pink">Today</span>
+                ) : days === 1 ? (
+                  <span className="pill pill-pink">Tomorrow</span>
+                ) : (
+                  <span className="pill">{days} days</span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
-
-      <section aria-labelledby="upcoming-list">
-        <h2 id="upcoming-list" className="mb-2 font-display text-xl font-bold">Upcoming birthdays</h2>
-        {list.length === 0 ? (
-          <EmptyState title="No birthdays yet">Once classmates join, their birthdays show up here.</EmptyState>
-        ) : (
-          <ul className="card divide-y divide-line p-0">
-            {list.map(({ m, date }) => {
-              const days = daysBetween(today, date);
-              const isMe = m.userId === me;
-              return (
-                <li key={m.userId} className="flex items-center gap-3 px-4 py-3">
-                  <Avatar name={m.fullName} url={m.avatarUrl} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold">{m.fullName}{isMe && " (you)"}</p>
-                    <p className="text-sm text-muted">{isMe ? "That's you — your room goes quiet for you" : `${formatDayMonth(m.birthMonth, m.birthDay)} · ${relativeDays(days)}`}</p>
-                  </div>
-                  {!isMe && days <= 7 && <span className="chip bg-sun text-[#221b3a]">{days === 0 ? "Today!" : "Soon"}</span>}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-    </div>
+    </>
   );
 }
 
 function MemberList({ members, me }: { members: Member[]; me: string }) {
   return (
-    <ul className="card divide-y divide-line p-0">
+    <ul className="card dashed-list py-0">
       {members.map((m) => (
-        <li key={m.userId} className="flex items-center gap-3 px-4 py-3">
+        <li key={m.userId} className="grid grid-cols-[36px_1fr_auto] items-center gap-2.5 py-2.5">
           <Avatar name={m.fullName} url={m.avatarUrl} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-bold">{m.fullName}{m.userId === me && " (you)"}</p>
-            <p className="text-sm text-muted">@{m.username} · 🎂 {formatDayMonth(m.birthMonth, m.birthDay)}</p>
+          <div className="min-w-0 text-sm font-bold text-ink">
+            <span className="block truncate">{m.fullName}{m.userId === me && " (you)"}</span>
+            <small className="block text-xs font-normal text-muted">@{m.username} · {m.birthDay} {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m.birthMonth - 1]}</small>
           </div>
-          {m.role !== "member" && <span className="chip">{roleLabel(m.role)}</span>}
+          {m.role !== "member" ? <span className={`pill ${m.role === "moderator" ? "" : "pill-mint"}`}>{roleLabel(m.role)}</span> : <span />}
         </li>
       ))}
     </ul>
@@ -187,7 +176,7 @@ function MeTab({ room, session }: { room: Room; session: Session }) {
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const p = session.profile!;
-  const [, month, day] = p.dob.split("-").map(Number);
+  const { month, day } = parseISODate(p.dob);
 
   async function leave() {
     try {
@@ -199,30 +188,31 @@ function MeTab({ room, session }: { room: Room; session: Session }) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="card flex items-center gap-4 p-5">
-        <Avatar name={p.fullName} url={p.avatarUrl} size={56} />
-        <div>
-          <p className="font-display text-xl font-bold">{p.fullName}</p>
-          <p className="text-muted">@{p.username} · {roleLabel(room.myRole)}</p>
-          <p className="text-muted">Classmates see your birthday as 🎂 {formatDayMonth(month!, day!)}</p>
+    <>
+      <div className="card flex items-center gap-3">
+        <Avatar name={p.fullName} url={p.avatarUrl} size={52} />
+        <div className="min-w-0 flex-1">
+          <b className="block font-display text-lg text-plum">{p.fullName}</b>
+          <p className="hint">@{p.username} · {roleLabel(room.myRole)}</p>
         </div>
+        <DateBlock month={month} day={day} />
       </div>
-      <Link href="/me" className="btn-ghost w-full">Edit profile and notifications</Link>
+      <p className="hint">Classmates see your birthday as a day and month only. On your birthday, your room goes quiet for you.</p>
+      <Link href="/me" className="btn-secondary">Edit profile and notifications</Link>
       {room.myRole !== "moderator" &&
         (confirm ? (
-          <div className="card p-4">
-            <p className="font-bold">Leave {room.name}?</p>
-            <p className="hint">You can join again later with the code.</p>
-            <div className="mt-3 flex gap-2">
-              <button type="button" className="btn bg-danger" onClick={leave}>Leave room</button>
-              <button type="button" className="btn-ghost" onClick={() => setConfirm(false)}>Stay</button>
+          <div className="card card-danger flex flex-col gap-2">
+            <span className="label !text-danger">Leave {room.name}?</span>
+            <p className="text-[13px]">You can join again later with the code.</p>
+            <div className="flex gap-2">
+              <button type="button" className="btn-secondary btn-sm flex-1 !border-danger !text-danger" onClick={leave}>Leave room</button>
+              <button type="button" className="btn-secondary btn-sm flex-1" onClick={() => setConfirm(false)}>Stay</button>
             </div>
           </div>
         ) : (
-          <button type="button" className="min-h-11 w-full font-bold text-danger" onClick={() => setConfirm(true)}>Leave this room</button>
+          <button type="button" className="min-h-11 text-sm font-bold text-danger" onClick={() => setConfirm(true)}>Leave this room</button>
         ))}
       <ErrorNote>{error}</ErrorNote>
-    </div>
+    </>
   );
 }

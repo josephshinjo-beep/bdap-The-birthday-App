@@ -5,7 +5,7 @@ import { AuthGate } from "@/components/auth-gate";
 import { CodeInput } from "@/components/code-input";
 import { ProfileForm } from "@/components/profile-form";
 import { useSession } from "@/components/providers";
-import { ErrorNote, Page } from "@/components/ui";
+import { BackLink, ErrorNote, Page, RoomBadge } from "@/components/ui";
 import { data } from "@/lib/data";
 import { DataError, type RoomPreview, type Session } from "@/lib/types";
 
@@ -71,56 +71,60 @@ function Join({ session }: { session: Session }) {
 
   if (step === "enrol" && preview) {
     return (
-      <Page narrow>
-        <button type="button" onClick={() => setStep("code")} className="mb-3 inline-flex min-h-11 items-center gap-1 font-bold text-muted hover:text-ink">
+      <Page>
+        <button type="button" onClick={() => setStep("code")} className="back">
           <span aria-hidden="true">←</span> Back
         </button>
-        <p className="chip">Joining {preview.name}</p>
-        <h1 className="mt-3 font-display text-3xl font-extrabold">Your details for the class</h1>
-        <p className="mt-1 text-muted">{preview.moderatorFirstName ?? "The moderator"} will see these when you ask to join.</p>
-        <div className="card mt-5 p-5">
-          <ProfileForm
-            initial={{ fullName: session.suggestedName ?? "" }}
-            submitLabel="Send join request"
-            onSaved={async () => {
-              await refresh();
-              await sendRequest();
-            }}
-          />
-          <ErrorNote>{error}</ErrorNote>
-        </div>
+        <span className="pill self-start">Joining {preview.name}</span>
+        <h1 className="a-h">Tell your class <em>who you are</em></h1>
+        <p className="a-sub">{preview.moderatorFirstName ?? "The moderator"} sees these when you ask to join.</p>
+        <ProfileForm
+          initial={{ fullName: session.suggestedName ?? "" }}
+          submitLabel="Send join request"
+          onSaved={async () => {
+            await refresh();
+            await sendRequest();
+          }}
+        />
+        <ErrorNote>{error}</ErrorNote>
       </Page>
     );
   }
 
   return (
-    <Page narrow>
-      <div className="enter mt-6 text-center">
-        <h1 className="font-display text-3xl font-extrabold sm:text-4xl">Join your class room</h1>
-        <p className="mt-1 text-muted">Type the 6-character code your class rep shared.</p>
-      </div>
-      <div className="enter-2 mt-8">
+    <Page>
+      <BackLink href="/">Back</BackLink>
+      <h1 className="a-h enter">Got a <em>room code?</em></h1>
+      <p className="a-sub enter-2">
+        Ask your class moderator. It looks like <span className="font-mono text-[13px] text-plum">K7P2QX</span>.
+      </p>
+      <div className="enter-2">
         <CodeInput value={code} onChange={setCode} invalid={notFound} autoFocus={!initialCode} />
-        <p className="mt-3 min-h-6 text-center text-sm" aria-live="polite">
-          {checking ? <span className="text-muted">Checking the code…</span> : notFound ? <span className="font-medium text-danger">No room with that code. Check it with your class rep.</span> : null}
-        </p>
       </div>
+      <p className="min-h-5 text-[13px]" aria-live="polite">
+        {checking ? <span className="text-muted">Checking the code…</span> : notFound ? <span className="font-bold text-danger">No room with that code. Check it with your moderator.</span> : null}
+      </p>
 
       {preview && (
-        <div className="card pop-in mt-4 p-5">
-          <p className="text-sm font-bold uppercase tracking-wide text-muted">Room found</p>
-          <p className="mt-1 font-display text-2xl font-extrabold">{preview.name}</p>
-          <p className="mt-1 text-muted">
-            {preview.memberCount} {preview.memberCount === 1 ? "member" : "members"}
-            {preview.moderatorFirstName && <> · run by {preview.moderatorFirstName}</>}
-          </p>
-          {preview.myStatus === "declined" && <p className="mt-2 text-sm text-muted">Your last request was declined. You can ask again.</p>}
-          <button type="button" className="btn mt-4 w-full" onClick={onThisIsMyClass} disabled={sending}>
+        <>
+          <div className="card pop-in flex items-center gap-2.5">
+            <RoomBadge name={preview.name} />
+            <div>
+              <b className="text-plum">{preview.name}</b>
+              <p className="hint">
+                {preview.memberCount} {preview.memberCount === 1 ? "member" : "members"}
+                {preview.moderatorFirstName && <> · Moderator: {preview.moderatorFirstName}</>}
+              </p>
+            </div>
+          </div>
+          {preview.myStatus === "declined" && <p className="hint">Your last request was declined. You can ask again.</p>}
+          <button type="button" className="btn pop-in" onClick={onThisIsMyClass} disabled={sending}>
             {sending ? "Sending…" : preview.myStatus === "approved" ? "Open the room →" : preview.myStatus === "pending" ? "See my request →" : "This is my class →"}
           </button>
           <ErrorNote>{error}</ErrorNote>
-        </div>
+        </>
       )}
+      <p className="hint">Wrong room? Clear the boxes and try again. Codes are not case-sensitive.</p>
     </Page>
   );
 }

@@ -16,10 +16,12 @@ export const DEFAULT_SETTINGS: RoomSettingsInput = {
 };
 
 const MODES: { id: AmountMode; label: string; hint: string }[] = [
-  { id: "fixed", label: "Fixed", hint: "Everyone pays the same" },
-  { id: "suggested", label: "Suggested", hint: "A nudge, pay what you like" },
-  { id: "any", label: "Any amount", hint: "No number shown" },
+  { id: "fixed", label: "Fixed", hint: "Everyone pays the same amount." },
+  { id: "suggested", label: "Suggested", hint: "A nudge. People can pay what they like." },
+  { id: "any", label: "Any", hint: "No amount shown. People pay what they like." },
 ];
+
+const AMOUNTS = [20, 50, 100];
 
 export function settingsValid(s: RoomSettingsInput) {
   return s.name.trim().length > 0 && s.payersPerUpi >= 1 && s.payersPerUpi <= 1000 && (s.amountMode === "any" || (s.amount != null && s.amount >= 1 && s.amount <= 100000));
@@ -31,41 +33,51 @@ export function RoomSettingsFields({ value, onChange }: { value: RoomSettingsInp
   const set = <K extends keyof RoomSettingsInput>(k: K, v: RoomSettingsInput[K]) => onChange({ ...value, [k]: v });
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-3.5">
       <div>
         <label htmlFor={ids.name} className="label">Room name</label>
-        <input id={ids.name} className="field" placeholder="CSE B · 3rd year" maxLength={80} value={value.name} onChange={(e) => set("name", e.target.value)} />
+        <input id={ids.name} className="field" placeholder="CSE-B · 2nd Year" maxLength={80} value={value.name} onChange={(e) => set("name", e.target.value)} />
       </div>
 
       <fieldset>
-        <legend className="label">How much should people chip in?</legend>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <legend className="label mb-[5px]">How people chip in</legend>
+        <div className="seg">
           {MODES.map((m) => (
-            <label key={m.id} className={`cursor-pointer rounded-2xl border-2 p-3 transition-transform hover:-translate-y-0.5 ${value.amountMode === m.id ? "border-ink bg-sun text-[#221b3a]" : "border-line bg-surface"}`}>
+            <label key={m.id}>
               <input type="radio" name="amount-mode" className="sr-only" checked={value.amountMode === m.id} onChange={() => set("amountMode", m.id)} />
-              <span className="block font-bold">{m.label}</span>
-              <span className="block text-sm opacity-80">{m.hint}</span>
+              {m.label}
             </label>
           ))}
         </div>
-        {value.amountMode !== "any" && (
-          <div className="mt-3 max-w-48">
-            <label htmlFor={ids.amount} className="label">{value.amountMode === "fixed" ? "Amount (₹)" : "Suggested amount (₹)"}</label>
-            <input
-              id={ids.amount}
-              className="field"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={100000}
-              value={value.amount ?? ""}
-              onChange={(e) => set("amount", e.target.value === "" ? null : Math.round(Number(e.target.value)))}
-            />
-          </div>
-        )}
+        <p className="hint mt-1">{MODES.find((m) => m.id === value.amountMode)?.hint}</p>
       </fieldset>
 
-      <div className="max-w-48">
+      {value.amountMode !== "any" && (
+        <fieldset>
+          <legend className="label mb-[5px]">{value.amountMode === "fixed" ? "Amount per person" : "Suggested amount"}</legend>
+          <div className="seg">
+            {AMOUNTS.map((a) => (
+              <button key={a} type="button" aria-pressed={value.amount === a} onClick={() => set("amount", a)}>
+                ₹{a}
+              </button>
+            ))}
+          </div>
+          <label htmlFor={ids.amount} className="sr-only">Other amount in rupees</label>
+          <input
+            id={ids.amount}
+            className="field mt-1.5"
+            type="number"
+            inputMode="numeric"
+            placeholder="Other amount (₹)"
+            min={1}
+            max={100000}
+            value={value.amount != null && !AMOUNTS.includes(value.amount) ? value.amount : ""}
+            onChange={(e) => set("amount", e.target.value === "" ? null : Math.round(Number(e.target.value)))}
+          />
+        </fieldset>
+      )}
+
+      <div>
         <label htmlFor={ids.payers} className="label">Payers per UPI ID</label>
         <input
           id={ids.payers}
@@ -79,15 +91,14 @@ export function RoomSettingsFields({ value, onChange }: { value: RoomSettingsInp
           onChange={(e) => set("payersPerUpi", Math.max(1, Math.round(Number(e.target.value) || 1)))}
         />
       </div>
-      <p id={ids.payersHint} className="hint -mt-4">Once a UPI ID has this many people, the next payer gets the next UPI ID.</p>
+      <p id={ids.payersHint} className="hint -mt-2.5">Once a UPI ID has this many people, the next payer gets the next UPI ID.</p>
 
-      <fieldset>
-        <legend className="label">Secret reminders</legend>
-        <div className="divide-y divide-line rounded-2xl border-2 border-line bg-surface px-4">
-          <Toggle label="A week before" hint="6:00 PM, 7 days ahead" checked={value.remindWeekBefore} onChange={(v) => set("remindWeekBefore", v)} />
-          <Toggle label="The day before" hint="6:00 PM the evening before" checked={value.remindDayBefore} onChange={(v) => set("remindDayBefore", v)} />
-          <Toggle label="On the day" hint="7:30 AM on the birthday" checked={value.remindOnDay} onChange={(v) => set("remindOnDay", v)} />
-        </div>
+      <fieldset className="card">
+        <legend className="sr-only">Secret reminders</legend>
+        <span className="label" aria-hidden="true">Secret reminders</span>
+        <Toggle label="Day before, 6:00 PM" checked={value.remindDayBefore} onChange={(v) => set("remindDayBefore", v)} />
+        <Toggle label="On the day, 7:30 AM" checked={value.remindOnDay} onChange={(v) => set("remindOnDay", v)} />
+        <Toggle label="A week before (to plan)" checked={value.remindWeekBefore} onChange={(v) => set("remindWeekBefore", v)} />
       </fieldset>
     </div>
   );
@@ -142,11 +153,17 @@ export function UpiFields({
   }
 
   return (
-    <fieldset className="rounded-2xl border-2 border-line bg-surface p-4">
-      <legend className="px-1 font-bold">UPI ID {index + 1}</legend>
-      <div className="grid gap-3 sm:grid-cols-2">
+    <fieldset className="card">
+      <legend className="sr-only">UPI ID {index + 1}</legend>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="pill" aria-hidden="true">UPI ID {index + 1}</span>
+        {onRemove && (
+          <button type="button" onClick={onRemove} className="min-h-10 px-1 text-[13px] font-bold text-danger">Remove</button>
+        )}
+      </div>
+      <div className="flex flex-col gap-3">
         <div>
-          <label htmlFor={ids.upi} className="label">UPI ID</label>
+          <label htmlFor={ids.upi} className="label">UPI ID that collects money</label>
           <input id={ids.upi} className="field" placeholder="name@okaxis" autoCapitalize="none" spellCheck={false} value={draft.upiId} aria-invalid={badUpi || undefined} onChange={(e) => onChange({ ...draft, upiId: e.target.value.trim() })} />
           {badUpi && <ErrorNote>That doesn&apos;t look like a UPI ID (name@bank).</ErrorNote>}
         </div>
@@ -168,9 +185,9 @@ export function UpiFields({
           <div className="flex items-center gap-2">
             {draft.qrImageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={draft.qrImageUrl} alt={`Uploaded QR for ${draft.upiId || "this UPI ID"}`} className="h-12 w-12 rounded-lg border-2 border-ink object-cover" />
+              <img src={draft.qrImageUrl} alt={`Uploaded QR for ${draft.upiId || "this UPI ID"}`} className="h-12 w-12 rounded-sm border border-line object-cover" />
             )}
-            <button type="button" className="btn-ghost btn-sm" aria-describedby={ids.qr} onClick={() => fileRef.current?.click()} disabled={uploading}>
+            <button type="button" className="btn-secondary btn-sm" aria-describedby={ids.qr} onClick={() => fileRef.current?.click()} disabled={uploading}>
               {uploading ? "Uploading…" : draft.qrImageUrl ? "Replace" : "Upload QR"}
             </button>
             {draft.qrImageUrl && (
@@ -178,12 +195,10 @@ export function UpiFields({
             )}
             <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
           </div>
+          <p className="hint mt-1">We make the QR from the UPI ID. Or upload your QR image instead.</p>
           <ErrorNote>{error}</ErrorNote>
         </div>
       </div>
-      {onRemove && (
-        <button type="button" onClick={onRemove} className="mt-3 min-h-11 text-sm font-bold text-danger">Remove this UPI ID</button>
-      )}
     </fieldset>
   );
 }

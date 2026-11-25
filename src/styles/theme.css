@@ -1,35 +1,54 @@
 /*
  * bdap theme: every colour, font, radius and motion token lives here.
- * The frontend partner owns this file. To restyle the app, change the values
- * in :root (and the dark block); components only use the Tailwind names
- * mapped in @theme below (bg-bg, text-ink, bg-accent, font-display, ...).
+ * Matches the design blueprint (docs/blueprint.html): one fixed, bright look
+ * in both light and dark system themes. Components only use the Tailwind
+ * names mapped in @theme below (bg-bg, text-ink, bg-plum, font-display, ...).
  * Font files are loaded in src/styles/fonts.ts and exposed as --font-*-src.
  */
 
 :root {
+  color-scheme: light;
+
   /* surfaces */
   --bg: #fff8ec;
   --surface: #ffffff;
-  --surface-2: #fff1d9;
+  --surface-2: #f3eadb; /* tab track, progress track */
   --line: #efe3cf;
 
   /* text */
   --ink: #221b3a;
   --muted: #6b6385;
-  --on-accent: #221b3a; /* ink on pink = 5.2:1; white would be 3.1:1 */
+  --plum: #2a1f4f; /* headings, main buttons, ticket */
+  --on-plum: #ffffff;
+  --plum-soft: #cfc6f2; /* muted text on plum */
 
   /* brand */
-  --accent: #ff4f7b;
-  --accent-strong: #e8335f;
+  --accent: #ff4f7b; /* pink */
+  --accent-soft: #ff7a9b; /* gift lid */
   --sun: #ffd23f;
+  --sun-deep: #ffbf00; /* envelope flap */
   --mint: #2ec4a0;
+  --mint-ink: #06281f;
   --sky: #4d8bff;
-  --night: #2a1f4f;
+  --night: #221b3a; /* secret callout */
+
+  /* pills */
+  --pill-bg: #f2ecff;
+  --pill-ink: #2a1f4f;
+  --pill-pink-bg: #ffe3ea;
+  --pill-pink-ink: #b0123e;
+  --pill-mint-bg: #d8f6ee;
+  --pill-mint-ink: #0d6b55;
+  --pill-sun-bg: #fff1b8;
+  --pill-sun-ink: #6b5200;
 
   /* status */
-  --ok: #1f9e7f;
-  --warn: #c98a00;
-  --danger: #d93b3b;
+  --ok: #0d6b55;
+  --danger: #b0123e;
+  --danger-line: #ffc7d4;
+  --danger-bg: #fff5f7;
+  --switch-off: #d9d0c1;
+  --avatar-bg: #e9e1ff;
 
   /* type */
   --font-display: var(--font-display-src), "Trebuchet MS", system-ui, sans-serif;
@@ -38,33 +57,20 @@
 
   /* shape */
   --radius-sm: 10px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --shadow-card: 0 1px 0 rgba(34, 27, 58, 0.06), 0 8px 24px -12px rgba(34, 27, 58, 0.18);
-  --shadow-pop: 0 4px 0 var(--ink);
+  --radius-md: 12px;
+  --radius-btn: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --shadow-btn: 0 4px 0 var(--accent);
+  --shadow-btn-press: 0 1px 0 var(--accent);
 
-  /* motion: playful archetype (150-300ms, ease-out-back) */
-  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* motion: playful archetype */
+  --ease-pop: cubic-bezier(0.3, 1.6, 0.5, 1);
+  --ease-drop: cubic-bezier(0.2, 1.4, 0.5, 1);
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
-  --dur-quick: 140ms;
-  --dur-base: 240ms;
-  --dur-slow: 480ms;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #17132a;
-    --surface: #211b3a;
-    --surface-2: #2a2347;
-    --line: #362e5a;
-    --ink: #f6f1ff;
-    --muted: #b3abcf;
-    --accent: #ff6b90;
-    --accent-strong: #ff4f7b;
-    --night: #0f0c1e;
-    --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
-    --shadow-pop: 0 4px 0 #0b0916;
-  }
+  --dur-quick: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 500ms;
 }
 
 @theme inline {
@@ -74,16 +80,22 @@
   --color-line: var(--line);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
-  --color-on-accent: var(--on-accent);
+  --color-plum: var(--plum);
+  --color-on-plum: var(--on-plum);
+  --color-plum-soft: var(--plum-soft);
   --color-accent: var(--accent);
-  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
   --color-sun: var(--sun);
+  --color-sun-deep: var(--sun-deep);
   --color-mint: var(--mint);
+  --color-mint-ink: var(--mint-ink);
   --color-sky: var(--sky);
   --color-night: var(--night);
   --color-ok: var(--ok);
-  --color-warn: var(--warn);
   --color-danger: var(--danger);
+  --color-danger-line: var(--danger-line);
+  --color-danger-bg: var(--danger-bg);
+  --color-avatar: var(--avatar-bg);
 
   --font-display: var(--font-display);
   --font-sans: var(--font-body);
@@ -91,8 +103,7 @@
 
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
+  --radius-btn: var(--radius-btn);
   --radius-lg: var(--radius-lg);
-  --shadow-card: var(--shadow-card);
-  --shadow-pop: var(--shadow-pop);
-  --ease-pop: var(--ease-pop);
+  --radius-xl: var(--radius-xl);
 }

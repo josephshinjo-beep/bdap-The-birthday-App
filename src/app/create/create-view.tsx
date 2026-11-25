@@ -24,12 +24,11 @@ function Create({ session }: { session: Session }) {
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ roomId: string; code: string } | null>(null);
 
-  // At creation the only member is you; add classmates' UPI IDs from Edit room later.
+  // At creation the only member is you; link classmates' UPI IDs from Edit room later.
   const owners = [
     { id: me.id as string | null, label: `Me (${me.fullName})` },
     { id: null, label: "Someone else (link them later)" },
   ];
-  const filled = upis.filter((u) => u.upiId || u.payeeName.trim() !== me.fullName);
   const upisOk = upis.length > 0 && upis.every(upiDraftValid);
   const canSubmit = settingsValid(settings) && upisOk && !saving;
 
@@ -50,35 +49,31 @@ function Create({ session }: { session: Session }) {
 
   if (created) {
     return (
-      <Page narrow>
-        <div className="pop-in mt-6 text-center">
-          <h1 className="font-display text-3xl font-extrabold">{settings.name} is ready 🎉</h1>
-          <p className="mt-1 text-muted">Share this code in your class group. You&apos;ll let people in from the dashboard.</p>
-        </div>
-        <div className="mt-6">
-          <CodeTicket code={created.code} roomName={settings.name} />
-        </div>
-        <div className="mt-6 flex flex-col gap-2">
-          <Link href={`/rooms/${created.roomId}/manage`} className="btn">Open the dashboard</Link>
-          <Link href={`/rooms/${created.roomId}`} className="btn-ghost">See the room</Link>
-        </div>
+      <Page>
+        <h1 className="a-h pop-in mt-2">
+          <em>{settings.name}</em> is ready 🎉
+        </h1>
+        <p className="a-sub">Share this code in your class group. You let people in from the dashboard.</p>
+        <CodeTicket code={created.code} roomName={settings.name} />
+        <Link href={`/rooms/${created.roomId}/manage`} className="btn">Open the dashboard</Link>
+        <Link href={`/rooms/${created.roomId}`} className="btn-secondary">View room as a member</Link>
       </Page>
     );
   }
 
   return (
-    <Page narrow>
-      <BackLink href="/rooms">My rooms</BackLink>
-      <h1 className="enter font-display text-3xl font-extrabold">Create a room for your class</h1>
-      <p className="enter-2 text-muted">You&apos;ll be the moderator. It takes a minute.</p>
-      <form onSubmit={submit} className="mt-6 space-y-8" noValidate>
+    <Page>
+      <BackLink href="/rooms">Back</BackLink>
+      <h1 className="a-h enter">
+        Start a room for <em>your class</em>
+      </h1>
+      <p className="a-sub enter-2">You&apos;ll be the moderator. It takes a minute.</p>
+      <form onSubmit={submit} className="flex flex-col gap-3.5" noValidate>
         <RoomSettingsFields value={settings} onChange={setSettings} />
 
-        <section aria-labelledby="upi-heading" className="space-y-3">
-          <div>
-            <h2 id="upi-heading" className="font-display text-xl font-bold">Where the money goes</h2>
-            <p className="hint">Add 2–3 UPI IDs so no single account gets swamped, and so there&apos;s a backup on the owner&apos;s own birthday.</p>
-          </div>
+        <section aria-labelledby="upi-heading" className="flex flex-col gap-2.5">
+          <h2 id="upi-heading" className="label">Where the money goes</h2>
+          <p className="hint -mt-1.5">Add 2–3 UPI IDs so no single account gets swamped, and so there&apos;s a backup on the owner&apos;s own birthday.</p>
           {upis.map((u, i) => (
             <UpiFields
               key={u.key}
@@ -91,18 +86,17 @@ function Create({ session }: { session: Session }) {
             />
           ))}
           {upis.length < 5 && (
-            <button type="button" className="btn-ghost w-full" onClick={() => setUpis((l) => [...l, blankUpi(null)])}>
+            <button type="button" className="btn-secondary" onClick={() => setUpis((l) => [...l, blankUpi(null)])}>
               + Add another UPI ID
             </button>
           )}
-          {upis.length < 2 && filled.length > 0 && <p className="hint">Tip: add a second UPI ID that belongs to someone else.</p>}
         </section>
 
         <ErrorNote>{error}</ErrorNote>
-        <button type="submit" className="btn w-full" disabled={!canSubmit}>
+        <button type="submit" className="btn" disabled={!canSubmit}>
           {saving ? "Creating…" : "Create room"}
         </button>
-        {!canSubmit && !saving && <p className="hint -mt-6 text-center">Add a room name, an amount and at least one valid UPI ID.</p>}
+        {!canSubmit && !saving && <p className="hint -mt-1.5 text-center">Add a room name, an amount and at least one valid UPI ID.</p>}
       </form>
     </Page>
   );
