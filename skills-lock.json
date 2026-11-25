@@ -17,12 +17,28 @@
       "computedHash": "071ad7608cf92ad980330a6b1646f6bc568f5651d615e4c4a9fde225ceb9360c",
       "installMode": "copy"
     },
+    "cicd-security": {
+      "source": "briiirussell/cybersecurity-skills",
+      "commit": "b19875422c1388db8c14d91ba7c1f8343e98c48b",
+      "sourceType": "github",
+      "skillPath": "skills/cicd-security/SKILL.md",
+      "computedHash": "ff97e2ca66e759ffcb2493ce9618654cdee3ad4d9622ad7dde8b16a53d1a55a9",
+      "installMode": "copy"
+    },
     "core-web-vitals": {
       "source": "addyosmani/web-quality-skills",
       "commit": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
       "sourceType": "github",
       "skillPath": "skills/core-web-vitals/SKILL.md",
       "computedHash": "de50c203aa9dafa8dee9dd8c06782e3fc610704b83c1c408e4c5ee2337c4cd2a",
+      "installMode": "copy"
+    },
+    "dependency-audit": {
+      "source": "briiirussell/cybersecurity-skills",
+      "commit": "b19875422c1388db8c14d91ba7c1f8343e98c48b",
+      "sourceType": "github",
+      "skillPath": "skills/dependency-audit/SKILL.md",
+      "computedHash": "a49b4d85e010becc80174467206b040cd1f29dacded75568d4ed2529dc33815e",
       "installMode": "copy"
     },
     "design-taste-frontend": {
@@ -97,6 +113,14 @@
       "computedHash": "d05b56284eea0118d481b8c673aff27cae66199282995bfe78315785f561002d",
       "installMode": "copy"
     },
+    "k6-load-testing": {
+      "source": "davila7/claude-code-templates",
+      "commit": "c4de112c9a0043261861dc55d92168eeb80b3127",
+      "sourceType": "github",
+      "skillPath": "cli-tool/components/skills/development/k6-load-testing/SKILL.md",
+      "computedHash": "a513f196e93bd2924066ed6b54e1ddaaddbbaa27d0c1066ef291f1fb881fbce5",
+      "installMode": "copy"
+    },
     "motion-design": {
       "source": "lottiefiles/motion-design-skill",
       "commit": "d77a9fc8cb371cab1ba5420df5bfd232cd14c9bb",
@@ -113,12 +137,36 @@
       "computedHash": "06902ebc4a8b91bfb8d1a99a03f186f0535b03d1a776ef751206104ef9b86c4c",
       "installMode": "copy"
     },
+    "secrets-audit": {
+      "source": "briiirussell/cybersecurity-skills",
+      "commit": "b19875422c1388db8c14d91ba7c1f8343e98c48b",
+      "sourceType": "github",
+      "skillPath": "skills/secrets-audit/SKILL.md",
+      "computedHash": "c5653798ad35ef286a6a5f968398603a04ad4259657628ea345f06cab32760c8",
+      "installMode": "copy"
+    },
+    "semgrep": {
+      "source": "trailofbits/skills",
+      "commit": "149d7b21f4067765b82e67029730b42d228ef4b4",
+      "sourceType": "github",
+      "skillPath": "plugins/static-analysis/skills/semgrep/SKILL.md",
+      "computedHash": "6ce4dd995d671502bec8f33fa13d66ddf3d0e23e2d91a7d9c0531ae9ac547985",
+      "installMode": "copy"
+    },
     "seo": {
       "source": "addyosmani/web-quality-skills",
       "commit": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
       "sourceType": "github",
       "skillPath": "skills/seo/SKILL.md",
       "computedHash": "fa30e94756c5c40663f4527e8220a985393abbe3a6256e43d02589948027467e",
+      "installMode": "copy"
+    },
+    "threat-modeling": {
+      "source": "briiirussell/cybersecurity-skills",
+      "commit": "b19875422c1388db8c14d91ba7c1f8343e98c48b",
+      "sourceType": "github",
+      "skillPath": "skills/threat-modeling/SKILL.md",
+      "computedHash": "2af8d6897a1bd4ec10658a5cdfc771a3e0599db79f4c81d38b119b1a41bc7b61",
       "installMode": "copy"
     },
     "web-quality-audit": {

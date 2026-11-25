@@ -1,0 +1,5 @@
+[
+  { "email": "k6-user-01@example.test", "password": "replace-in-staging-only" },
+  { "email": "k6-user-02@example.test", "password": "replace-in-staging-only" },
+  { "email": "k6-user-03@example.test", "password": "replace-in-staging-only" }
+]
