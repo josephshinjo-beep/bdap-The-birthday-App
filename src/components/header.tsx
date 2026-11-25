@@ -30,7 +30,7 @@ export function Header() {
   const path = usePathname();
   return (
     <header className="sticky top-0 z-30 border-b border-transparent bg-bg/90 backdrop-blur md:border-line" style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      <div className="mx-auto flex max-w-md items-center justify-between gap-2 px-[18px] py-1.5 md:max-w-3xl md:px-8 md:py-2.5 lg:max-w-6xl">
+      <div className="mx-auto flex max-w-md items-center justify-between gap-2 px-[18px] py-1.5 md:max-w-3xl md:px-8 md:py-2.5 lg:max-w-6xl xl:max-w-[1360px] xl:px-12 2xl:max-w-[1520px]">
         <Logo />
         <nav aria-label="Main" className="flex items-center gap-0.5 md:gap-1">
           {loading ? null : session ? (

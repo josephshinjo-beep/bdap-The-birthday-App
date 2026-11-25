@@ -13,15 +13,15 @@ function HeroArt({ className = "" }: { className?: string }) {
 
 export default function Home() {
   return (
-    <main id="main" className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3.5 px-[18px] pb-28 pt-3 md:max-w-3xl md:px-8 md:pt-10 lg:max-w-6xl lg:gap-12">
+    <main id="main" className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3.5 px-[18px] pb-28 pt-3 md:max-w-3xl md:px-8 md:pt-10 lg:pt-14 lg:max-w-6xl xl:max-w-[1360px] xl:px-12 2xl:max-w-[1520px] lg:gap-12">
       {/* Hero: stacked on phones (text inside the plum card), side by side on laptops. */}
-      <section aria-labelledby="hero" className="grid gap-3.5 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-12">
+      <section aria-labelledby="hero" className="grid gap-3.5 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-12 xl:gap-20">
         <div className="relative flex flex-col gap-3.5 lg:gap-5">
           <div className="enter relative h-[180px] overflow-hidden rounded-xl bg-plum md:h-[220px] lg:h-auto lg:overflow-visible lg:bg-transparent">
             <HeroArt className="absolute inset-0 lg:hidden" />
-            <h1 id="hero" className="absolute left-4 top-[18px] max-w-[62%] font-display text-[22px] font-extrabold leading-[1.1] text-white md:left-6 md:top-7 md:text-[32px] lg:static lg:max-w-none lg:text-[58px] lg:leading-[1.02] lg:text-plum">
+            <h1 id="hero" className="absolute left-4 top-[18px] max-w-[62%] font-display text-[22px] font-extrabold leading-[1.1] text-white md:left-6 md:top-7 md:text-[32px] lg:static lg:max-w-none lg:text-[58px] lg:leading-[1.02] lg:text-plum xl:text-[68px]">
               Never miss a classmate&apos;s birthday.
-              <small className="mt-1.5 block font-sans text-xs font-medium text-plum-soft md:text-sm lg:mt-3 lg:font-display lg:text-[58px] lg:font-extrabold lg:leading-[1.02] lg:text-accent">
+              <small className="mt-1.5 block font-sans text-xs font-medium text-plum-soft md:text-sm lg:mt-3 lg:font-display lg:text-[58px] lg:font-extrabold lg:leading-[1.02] lg:text-accent xl:text-[68px]">
                 And never spoil the surprise.
               </small>
             </h1>
@@ -40,7 +40,7 @@ export default function Home() {
         {/* Laptop-only visual: the blueprint's 6 PM lock screen with the secret heads-up. */}
         <div
           aria-hidden="true"
-          className="relative hidden h-[440px] flex-col gap-3.5 overflow-hidden rounded-xl p-7 text-white lg:flex"
+          className="relative hidden h-[440px] flex-col xl:h-[480px] gap-3.5 overflow-hidden rounded-xl p-7 text-white lg:flex"
           style={{ background: "linear-gradient(160deg, var(--plum), #4b2a6e 60%, var(--accent))" }}
         >
           <p className="mt-6 text-center font-display text-[72px] font-bold leading-none">18:00</p>

@@ -13,7 +13,7 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
  * <Columns> inside it.
  */
 export function Page({ children, size = "narrow" }: { children: ReactNode; size?: "narrow" | "wide"; narrow?: boolean }) {
-  const width = size === "wide" ? "max-w-md md:max-w-3xl lg:max-w-6xl" : "max-w-md md:max-w-lg";
+  const width = size === "wide" ? "max-w-md md:max-w-3xl lg:max-w-6xl xl:max-w-[1360px] xl:px-12 2xl:max-w-[1520px]" : "max-w-md md:max-w-lg";
   return (
     <main id="main" className={`mx-auto flex w-full flex-1 flex-col gap-3.5 px-[18px] pb-28 pt-3 md:px-8 md:pt-8 lg:gap-5 ${width}`}>
       {children}
@@ -24,7 +24,7 @@ export function Page({ children, size = "narrow" }: { children: ReactNode; size?
 /** Main column + sidebar on laptops (sidebar sticks while you scroll); stacked on phones. */
 export function Columns({ main, side, sideFirstOnMobile = false, stickySide = true }: { main: ReactNode; side: ReactNode; sideFirstOnMobile?: boolean; stickySide?: boolean }) {
   return (
-    <div className="grid gap-3.5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8">
+    <div className="grid gap-3.5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-12">
       <div className={`flex min-w-0 flex-col gap-3.5 lg:gap-5 ${sideFirstOnMobile ? "order-2 lg:order-1" : ""}`}>{main}</div>
       <aside className={`flex min-w-0 flex-col gap-3.5 lg:gap-5 ${stickySide ? "lg:sticky lg:top-24" : ""} ${sideFirstOnMobile ? "order-1 lg:order-2" : ""}`}>{side}</aside>
     </div>
