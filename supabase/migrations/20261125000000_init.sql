@@ -62,7 +62,7 @@ create index memberships_user_idx on public.memberships (user_id);
 create table public.room_upi_accounts (
   id             uuid primary key default gen_random_uuid(),
   room_id        uuid not null references public.rooms (id) on delete cascade,
-  upi_id         text not null check (upi_id ~ '^[A-Za-z0-9._-]{2,256}@[A-Za-z]{2,64}$'),
+  upi_id         text not null check (upi_id ~ '^[A-Za-z0-9._-]{2,}@[A-Za-z]{2,64}$' and char_length(upi_id) <= 320),
   payee_name     text not null check (char_length(btrim(payee_name)) between 1 and 80),
   owner_user_id  uuid references public.profiles (id) on delete set null,
   qr_image_url   text,

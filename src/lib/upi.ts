@@ -58,10 +58,12 @@ export function buildUpiLink({ upiId, payeeName, amount, note }: UpiLinkInput): 
   return "upi://pay?" + params.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
 }
 
-export const UPI_ID_PATTERN = /^[A-Za-z0-9._-]{2,256}@[A-Za-z]{2,64}$/;
+// Same rule as the room_upi_accounts check constraint in the database.
+export const UPI_ID_PATTERN = /^[A-Za-z0-9._-]{2,}@[A-Za-z]{2,64}$/;
 
 export function isValidUpiId(value: string): boolean {
-  return UPI_ID_PATTERN.test(value.trim());
+  const v = value.trim();
+  return v.length <= 320 && UPI_ID_PATTERN.test(v);
 }
 
 /** "₹900" */
