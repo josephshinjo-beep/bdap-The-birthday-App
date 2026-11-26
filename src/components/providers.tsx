@@ -1,10 +1,11 @@
 "use client";
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, Suspense, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { data, dataMode } from "@/lib/data";
 import { onMockChange } from "@/lib/data/mock";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import type { Session } from "@/lib/types";
 import { DemoSwitcher } from "./demo-switcher";
+import { InstallBanner } from "./install-prompt";
 
 interface SessionState {
   session: Session | null;
@@ -50,6 +51,9 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <SessionContext.Provider value={{ session, loading, refresh }}>
       {children}
+      <Suspense fallback={null}>
+        <InstallBanner />
+      </Suspense>
       {dataMode === "mock" && <DemoSwitcher />}
     </SessionContext.Provider>
   );

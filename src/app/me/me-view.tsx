@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
 import { ProfileForm } from "@/components/profile-form";
 import { useSession } from "@/components/providers";
+import { InstallCard } from "@/components/install-prompt";
 import { PushPrompt } from "@/components/push-prompt";
 import { Avatar, BackLink, Page } from "@/components/ui";
 import { data } from "@/lib/data";
@@ -29,6 +30,11 @@ function Me({ session }: { session: Session }) {
           <p className="hint truncate">@{p.username}{session.email && <> · {session.email}</>}</p>
         </div>
       </div>
+
+      <section aria-labelledby="install" className="flex flex-col gap-2">
+        <h2 id="install" className="label">App</h2>
+        <InstallCard />
+      </section>
 
       <section aria-labelledby="notif" className="flex flex-col gap-2">
         <h2 id="notif" className="label">Notifications</h2>

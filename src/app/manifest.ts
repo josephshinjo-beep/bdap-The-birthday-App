@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: "/",
     name: "bdap — the birthday app",
     short_name: "bdap",
     description: "Secret birthday reminders and UPI chip-ins for your class.",
@@ -9,6 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
+    categories: ["social", "lifestyle", "education"],
     background_color: "#fff8ec",
     theme_color: "#2a1f4f",
     icons: [
