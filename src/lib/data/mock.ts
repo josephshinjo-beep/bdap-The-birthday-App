@@ -4,16 +4,17 @@
 // (open two tabs as different demo users to see "realtime" approvals).
 // Switch users with the demo switcher (bottom of every page in mock mode).
 
-import { addDays, nextBirthday, parseISODate, todayIST } from "@/lib/dates";
+import { addDays, nextBirthday, parseISODate, timeIST, todayIST } from "@/lib/dates";
+import { DECISION_WINDOW_DAYS, dueReminders, reminderText } from "@/lib/reminders";
 import { pickUpiAccount } from "@/lib/upi";
 import {
   DataError,
   type AppNotification,
   type Celebration,
+  type CelebrationDecision,
   type CreateRoomInput,
   type Member,
   type MemberStatus,
-  type NotificationKind,
   type Payer,
   type Pool,
   type Profile,
@@ -28,7 +29,7 @@ import {
 } from "@/lib/types";
 import type { DataApi, Unsubscribe } from "./api";
 
-const STORE_KEY = "bdap-mock-v1";
+const STORE_KEY = "bdap-mock-v2";
 const USER_KEY = "bdap-mock-user";
 const EVENT = "bdap-mock-change";
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -54,6 +55,11 @@ interface StoredRoom {
   remindWeekBefore: boolean;
   remindDayBefore: boolean;
   remindOnDay: boolean;
+  remindWeekBeforeAt: string;
+  remindDayBeforeAt: string;
+  remindOnDayAt: string;
+  sendBirthdayWish: boolean;
+  autoCelebrate: boolean;
   createdBy: string;
 }
 interface StoredMembership {
@@ -85,6 +91,8 @@ interface Store {
   upi: StoredUpi[];
   contributions: StoredContribution[];
   notifications: StoredNotification[];
+  /** Admin decisions per celebration id. Missing = the room's default. */
+  decisions: Record<string, CelebrationDecision>;
 }
 
 // ---------------------------------------------------------------------------
@@ -123,11 +131,15 @@ function seed(): Store {
   const rooms: StoredRoom[] = [
     {
       id: "r-cseb", name: "CSE B · 3rd year", code: "CSEB26", amountMode: "suggested", amount: 50,
-      payersPerUpi: 20, remindWeekBefore: false, remindDayBefore: true, remindOnDay: true, createdBy: "u-aarav",
+      payersPerUpi: 20, remindWeekBefore: false, remindDayBefore: true, remindOnDay: true,
+      remindWeekBeforeAt: "18:00", remindDayBeforeAt: "18:00", remindOnDayAt: "07:30", sendBirthdayWish: true, autoCelebrate: false,
+      createdBy: "u-aarav",
     },
     {
       id: "r-hostel", name: "Hostel Block C", code: "HSTLC7", amountMode: "fixed", amount: 30,
-      payersPerUpi: 20, remindWeekBefore: true, remindDayBefore: true, remindOnDay: true, createdBy: "u-meera",
+      payersPerUpi: 20, remindWeekBefore: true, remindDayBefore: true, remindOnDay: true,
+      remindWeekBeforeAt: "19:00", remindDayBeforeAt: "21:00", remindOnDayAt: "08:00", sendBirthdayWish: true, autoCelebrate: true,
+      createdBy: "u-meera",
     },
   ];
 
@@ -168,6 +180,8 @@ function seed(): Store {
     upi,
     contributions,
     notifications: [],
+    // CSE B: Riya's birthday is approved; Meera's waits for an admin decision.
+    decisions: { [riyaCel]: "celebrate" },
   };
 }
 
@@ -301,10 +315,11 @@ function notify(store: Store, userId: string, n: Omit<StoredNotification, "id" |
   store.notifications.unshift({ ...n, id: uid("n"), userId, createdAt: new Date().toISOString(), readAt: null });
 }
 
-/** Celebrations in the next 7 days for a room (all of them, including the caller's own). */
-function roomCelebrations(store: Store, roomId: string): Celebration[] {
+/** Celebrations in the next `days` days for a room (all of them, including the caller's own). */
+function roomCelebrations(store: Store, roomId: string, days = DECISION_WINDOW_DAYS): Celebration[] {
   const today = todayIST();
-  const limit = addDays(today, 7);
+  const limit = addDays(today, days);
+  const room = store.rooms.find((r) => r.id === roomId);
   return store.memberships
     .filter((m) => m.roomId === roomId && m.status === "approved")
     .flatMap((m) => {
@@ -313,13 +328,15 @@ function roomCelebrations(store: Store, roomId: string): Celebration[] {
       const { month, day } = parseISODate(p.dob);
       const date = nextBirthday(month, day, today);
       if (date > limit) return [];
+      const id = celebrationId(roomId, p.id, date);
       return [{
-        id: celebrationId(roomId, p.id, date),
+        id,
         roomId,
         birthdayUserId: p.id,
         birthdayName: p.fullName,
         date,
         status: date === today ? "live" : "upcoming",
+        decision: store.decisions[id] ?? (room?.autoCelebrate ? "celebrate" : "pending"),
       } satisfies Celebration];
     })
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -330,22 +347,27 @@ function findCelebration(store: Store, id: string): Celebration | null {
   return roomCelebrations(store, roomId).find((c) => c.id === id) ?? null;
 }
 
-/** What the cron job does, run on load so the demo always has reminders. */
+/** What the reminder job does (src/lib/reminders.ts), run on load and after changes. */
 function runReminders(store: Store) {
   const today = todayIST();
+  const time = timeIST();
   for (const room of store.rooms) {
     for (const c of roomCelebrations(store, room.id)) {
-      const first = c.birthdayName.split(" ")[0];
-      let kind: NotificationKind | null = null;
-      if (c.date === today && room.remindOnDay) kind = "on_day";
-      else if (c.date === addDays(today, 1) && room.remindDayBefore) kind = "day_before";
-      else if (c.date === addDays(today, 7) && room.remindWeekBefore) kind = "week_before";
-      if (!kind) continue;
-      const title = kind === "on_day" ? `Today is ${first}'s birthday!` : kind === "day_before" ? `Psst. ${first}'s birthday is tomorrow` : `${first}'s birthday is in a week`;
-      const body = kind === "on_day" ? `Chip in and wish ${first} before class.` : kind === "day_before" ? `A gift is waiting for you to unwrap. Don't tell ${first}.` : `Start planning in ${room.name}. Don't tell ${first}.`;
-      for (const m of store.memberships) {
-        if (m.roomId !== room.id || m.status !== "approved" || m.userId === c.birthdayUserId) continue;
-        notify(store, m.userId, { roomId: room.id, celebrationId: c.id, kind, title, body, url: `/rooms/${room.id}/surprise/${c.id}` });
+      const first = c.birthdayName.split(" ")[0]!;
+      const due = dueReminders({ settings: room, decision: c.decision, date: c.date, today, time });
+      const approved = store.memberships.filter((m) => m.roomId === room.id && m.status === "approved");
+      for (const kind of due.toMembers) {
+        const url = kind === "wish_reminder" ? `/rooms/${room.id}` : `/rooms/${room.id}/surprise/${c.id}`;
+        for (const m of approved) if (m.userId !== c.birthdayUserId) notify(store, m.userId, { roomId: room.id, celebrationId: c.id, kind, ...reminderText(kind, first, room.name), url });
+      }
+      for (const kind of due.toBirthdayPerson) {
+        notify(store, c.birthdayUserId, { roomId: room.id, celebrationId: c.id, kind, ...reminderText(kind, first, room.name), url: `/rooms/${room.id}` });
+      }
+      for (const kind of due.toAdmins) {
+        for (const m of approved) {
+          if (m.role === "member" || m.userId === c.birthdayUserId) continue;
+          notify(store, m.userId, { roomId: room.id, celebrationId: c.id, kind, ...reminderText(kind, first, room.name), url: `/rooms/${room.id}/manage?tab=birthdays` });
+        }
       }
     }
   }
@@ -356,7 +378,9 @@ function toRoom(r: StoredRoom, m: StoredMembership): Room {
   return {
     id: r.id, name: r.name, code: admin ? r.code : null, amountMode: r.amountMode, amount: r.amount,
     payersPerUpi: r.payersPerUpi, remindWeekBefore: r.remindWeekBefore, remindDayBefore: r.remindDayBefore,
-    remindOnDay: r.remindOnDay, createdBy: r.createdBy, myRole: m.role, myStatus: m.status,
+    remindOnDay: r.remindOnDay, remindWeekBeforeAt: r.remindWeekBeforeAt, remindDayBeforeAt: r.remindDayBeforeAt,
+    remindOnDayAt: r.remindOnDayAt, sendBirthdayWish: r.sendBirthdayWish, autoCelebrate: r.autoCelebrate,
+    createdBy: r.createdBy, myRole: m.role, myStatus: m.status,
   };
 }
 
@@ -466,6 +490,8 @@ export const mockApi: DataApi = {
       id: uid("r"), name: input.name.trim(), code: newCode(store), amountMode: input.amountMode,
       amount: input.amountMode === "any" ? null : input.amount, payersPerUpi: input.payersPerUpi,
       remindWeekBefore: input.remindWeekBefore, remindDayBefore: input.remindDayBefore, remindOnDay: input.remindOnDay,
+      remindWeekBeforeAt: input.remindWeekBeforeAt, remindDayBeforeAt: input.remindDayBeforeAt, remindOnDayAt: input.remindOnDayAt,
+      sendBirthdayWish: input.sendBirthdayWish, autoCelebrate: input.autoCelebrate,
       createdBy: me.id,
     };
     store.rooms.push(room);
@@ -483,6 +509,21 @@ export const mockApi: DataApi = {
     if (!isAdmin(store, roomId, me)) throw new DataError("not_allowed");
     const r = store.rooms.find((x) => x.id === roomId)!;
     Object.assign(r, { ...input, name: input.name.trim(), amount: input.amountMode === "any" ? null : input.amount });
+    runReminders(store);
+    persist(store);
+  },
+
+  async deleteRoom(roomId) {
+    const me = requireUser();
+    const store = load();
+    if (!isModerator(store, roomId, me)) throw new DataError("not_allowed", "Only the moderator can delete the room.");
+    const prefix = `c.${roomId}.`;
+    store.rooms = store.rooms.filter((r) => r.id !== roomId);
+    store.memberships = store.memberships.filter((m) => m.roomId !== roomId);
+    store.upi = store.upi.filter((u) => u.roomId !== roomId);
+    store.notifications = store.notifications.filter((n) => n.roomId !== roomId);
+    store.contributions = store.contributions.filter((c) => !c.celebrationId.startsWith(prefix));
+    for (const k of Object.keys(store.decisions)) if (k.startsWith(prefix)) delete store.decisions[k];
     persist(store);
   },
 
@@ -600,6 +641,15 @@ export const mockApi: DataApi = {
     persist(store);
   },
 
+  async deleteUpiAccount(roomId, accountId) {
+    const me = requireUser();
+    const store = load();
+    if (!isAdmin(store, roomId, me)) throw new DataError("not_allowed");
+    store.upi = store.upi.filter((u) => !(u.id === accountId && u.roomId === roomId));
+    for (const k of store.contributions) if (k.upiAccountId === accountId) k.upiAccountId = null;
+    persist(store);
+  },
+
   async uploadQrImage(_roomId, file) {
     return new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -613,7 +663,25 @@ export const mockApi: DataApi = {
     const me = requireUser();
     const store = load();
     if (!isMember(store, roomId, me)) return [];
+    const week = addDays(todayIST(), 7);
+    return delay(roomCelebrations(store, roomId).filter((c) => c.birthdayUserId !== me && c.decision === "celebrate" && c.date <= week), 60);
+  },
+
+  async adminCelebrations(roomId) {
+    const me = requireUser();
+    const store = load();
+    if (!isAdmin(store, roomId, me)) throw new DataError("not_allowed");
     return delay(roomCelebrations(store, roomId).filter((c) => c.birthdayUserId !== me), 60);
+  },
+
+  async setCelebrationDecision(id, decision) {
+    const me = requireUser();
+    const store = load();
+    const c = findCelebration(store, id);
+    if (!c || c.birthdayUserId === me || !isAdmin(store, c.roomId, me)) throw new DataError("not_allowed");
+    store.decisions[id] = decision;
+    runReminders(store);
+    persist(store);
   },
 
   async getCelebration(id) {
@@ -621,6 +689,8 @@ export const mockApi: DataApi = {
     const store = load();
     const c = findCelebration(store, id);
     if (!c || c.birthdayUserId === me || !isMember(store, c.roomId, me)) return null;
+    // Members only see approved celebrations; admins see every decision.
+    if (c.decision !== "celebrate" && !isAdmin(store, c.roomId, me)) return null;
     return c;
   },
 
@@ -628,7 +698,7 @@ export const mockApi: DataApi = {
     const me = requireUser();
     const store = load();
     const c = findCelebration(store, id);
-    if (!c || c.birthdayUserId === me || !isMember(store, c.roomId, me)) throw new DataError("not_found");
+    if (!c || c.birthdayUserId === me || !isMember(store, c.roomId, me) || c.decision !== "celebrate") throw new DataError("not_found");
     const room = store.rooms.find((r) => r.id === c.roomId)!;
     let mine = store.contributions.find((x) => x.celebrationId === id && x.userId === me);
     let allFull = false;
@@ -669,7 +739,7 @@ export const mockApi: DataApi = {
     const me = requireUser();
     const store = load();
     const c = findCelebration(store, id);
-    if (!c || c.birthdayUserId === me || !isMember(store, c.roomId, me)) throw new DataError("not_found");
+    if (!c || c.birthdayUserId === me || !isMember(store, c.roomId, me) || c.decision !== "celebrate") throw new DataError("not_found");
     const room = store.rooms.find((r) => r.id === c.roomId)!;
     let mine = store.contributions.find((x) => x.celebrationId === id && x.userId === me);
     if (!mine) {
@@ -686,6 +756,7 @@ export const mockApi: DataApi = {
     const store = load();
     const c = findCelebration(store, id);
     if (!c || c.birthdayUserId === me || !isMember(store, c.roomId, me)) throw new DataError("not_found");
+    if (c.decision !== "celebrate" && !isAdmin(store, c.roomId, me)) throw new DataError("not_found");
     const room = store.rooms.find((r) => r.id === c.roomId)!;
     const paid = store.contributions.filter((x) => x.celebrationId === id && x.paidAt);
     return {

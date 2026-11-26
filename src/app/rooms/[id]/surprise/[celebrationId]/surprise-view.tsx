@@ -46,6 +46,24 @@ function SurpriseLoader({ session }: { session: Session }) {
       </Page>
     );
   }
+  if (cel.data.decision !== "celebrate") {
+    // Only admins can reach this (members never see unapproved celebrations).
+    const first = cel.data.birthdayName.split(" ")[0];
+    return (
+      <Page>
+        <EmptyState
+          title={cel.data.decision === "wish_only" ? `${first}'s birthday is wish only` : `${first}'s birthday isn't approved yet`}
+          action={
+            <Link href={`/rooms/${id}/manage?tab=birthdays`} className="btn w-full">
+              Decide in the dashboard
+            </Link>
+          }
+        >
+          The surprise page and UPI collection open once an admin chooses Celebrate.
+        </EmptyState>
+      </Page>
+    );
+  }
   return <SurpriseFlow room={room.data} celebration={cel.data} />;
 }
 

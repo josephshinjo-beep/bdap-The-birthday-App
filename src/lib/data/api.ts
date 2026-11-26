@@ -3,6 +3,7 @@
 import type {
   AppNotification,
   Celebration,
+  CelebrationDecision,
   CreateRoomInput,
   Member,
   MemberStatus,
@@ -44,6 +45,8 @@ export interface DataApi {
   updateRoom(roomId: string, input: RoomSettingsInput): Promise<void>;
   regenerateCode(roomId: string): Promise<string>;
   leaveRoom(roomId: string): Promise<void>;
+  /** Moderator only. Deletes the room, its members, celebrations and UPI IDs. */
+  deleteRoom(roomId: string): Promise<void>;
 
   // members (admins see pending too)
   listMembers(roomId: string): Promise<Member[]>;
@@ -57,10 +60,15 @@ export interface DataApi {
   listUpiAccounts(roomId: string): Promise<UpiAccount[]>;
   addUpiAccount(roomId: string, input: UpiAccountInput): Promise<void>;
   updateUpiAccount(roomId: string, accountId: string, patch: Partial<UpiAccountInput> & { active?: boolean; sortOrder?: number }): Promise<void>;
+  deleteUpiAccount(roomId: string, accountId: string): Promise<void>;
   uploadQrImage(roomId: string, file: File): Promise<string>;
 
   // celebrations (never returns the caller's own)
+  /** Approved celebrations in the next 7 days (what members see). */
   upcomingCelebrations(roomId: string): Promise<Celebration[]>;
+  /** Admins: every birthday in the next 30 days with its decision. */
+  adminCelebrations(roomId: string): Promise<Celebration[]>;
+  setCelebrationDecision(celebrationId: string, decision: CelebrationDecision): Promise<void>;
   getCelebration(celebrationId: string): Promise<Celebration | null>;
   openSurprise(celebrationId: string): Promise<Surprise>;
   markPaid(celebrationId: string, paid: boolean, amount?: number | null): Promise<void>;

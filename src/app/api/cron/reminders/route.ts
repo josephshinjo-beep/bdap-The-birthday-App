@@ -1,10 +1,10 @@
-// Reminder job. Called by Supabase pg_cron (+ pg_net) at 6:00 PM IST (slot=evening)
-// and 7:30 AM IST (slot=morning), with `Authorization: Bearer $CRON_SECRET`.
-// Vercel Cron (vercel.json) is a fallback; running twice is safe because
-// prepare_reminders() only returns notifications it newly created.
+// Reminder job. Called every 15 minutes by Supabase pg_cron (+ pg_net) with
+// `Authorization: Bearer $CRON_SECRET`. Each room picks its own reminder
+// times, so every run sends whatever has become due (see src/lib/reminders.ts
+// and prepare_due_reminders()). Running twice never sends twice.
+// Vercel Cron (vercel.json) is a once-a-day fallback.
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
-import { REMINDER_SLOTS, todayIST, type ReminderSlot } from "@/lib/dates";
 import { sendPushes, type StoredSubscription } from "@/lib/push";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
@@ -20,24 +20,18 @@ function authorized(request: NextRequest): boolean {
 async function run(request: NextRequest) {
   if (!authorized(request)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const slot = request.nextUrl.searchParams.get("slot");
-  if (slot !== "evening" && slot !== "morning") return NextResponse.json({ error: "slot must be evening or morning" }, { status: 400 });
-
-  // ?date=YYYY-MM-DD lets you rehearse a day (still needs the secret).
-  const dateParam = request.nextUrl.searchParams.get("date");
-  if (dateParam && !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return NextResponse.json({ error: "bad date" }, { status: 400 });
-  const today = dateParam ?? todayIST();
+  // ?at=2026-11-26T18:05:00+05:30 rehearses a moment in time (still needs the secret).
+  const atParam = request.nextUrl.searchParams.get("at");
+  const at = atParam ? new Date(atParam) : new Date();
+  if (Number.isNaN(at.getTime())) return NextResponse.json({ error: "bad at" }, { status: 400 });
 
   const admin = getAdminSupabase();
-  const created: { notification_id: string; user_id: string; title: string; body: string; url: string; kind: string }[] = [];
-  for (const kind of REMINDER_SLOTS[slot as ReminderSlot].kinds) {
-    const { data, error } = await admin.rpc("prepare_reminders", { p_today: today, p_kind: kind });
-    if (error) {
-      console.error("prepare_reminders failed", kind, error.message);
-      return NextResponse.json({ error: "prepare_reminders failed" }, { status: 500 });
-    }
-    for (const row of data ?? []) created.push({ ...row, kind });
+  const { data, error } = await admin.rpc("prepare_due_reminders", { p_now: at.toISOString() });
+  if (error) {
+    console.error("prepare_due_reminders failed", error.message);
+    return NextResponse.json({ error: "prepare_due_reminders failed" }, { status: 500 });
   }
+  const created = (data ?? []) as { notification_id: string; user_id: string; title: string; body: string; url: string }[];
 
   let push = { sent: 0, failed: 0, gone: 0 };
   if (created.length > 0) {
@@ -61,7 +55,7 @@ async function run(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, slot, date: today, notifications: created.length, push });
+  return NextResponse.json({ ok: true, at: at.toISOString(), notifications: created.length, push });
 }
 
 export const POST = run;

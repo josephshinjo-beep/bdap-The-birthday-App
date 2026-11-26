@@ -5,6 +5,13 @@ export type Role = "moderator" | "co_moderator" | "member";
 export type MemberStatus = "pending" | "approved" | "declined";
 export type AmountMode = "fixed" | "suggested" | "any";
 export type CelebrationStatus = "upcoming" | "live" | "done";
+/**
+ * What the admins decided for a birthday.
+ * - pending: not decided yet (treated like wish_only on the day)
+ * - celebrate: secret reminders, surprise page and UPI collection
+ * - wish_only: no collection; the room just wishes them on the day
+ */
+export type CelebrationDecision = "pending" | "celebrate" | "wish_only";
 export type NotificationKind =
   | "week_before"
   | "day_before"
@@ -12,7 +19,10 @@ export type NotificationKind =
   | "join_request"
   | "join_approved"
   | "join_declined"
-  | "upi_full";
+  | "upi_full"
+  | "decision_needed"
+  | "wish_reminder"
+  | "birthday_wish";
 
 /** The signed-in user's own profile. Only the owner ever sees `dob`. */
 export interface Profile {
@@ -59,6 +69,11 @@ export interface Room {
   remindWeekBefore: boolean;
   remindDayBefore: boolean;
   remindOnDay: boolean;
+  remindWeekBeforeAt: string;
+  remindDayBeforeAt: string;
+  remindOnDayAt: string;
+  sendBirthdayWish: boolean;
+  autoCelebrate: boolean;
   createdBy: string;
   myRole: Role;
   myStatus: MemberStatus;
@@ -109,6 +124,14 @@ export interface CreateRoomInput {
   remindWeekBefore: boolean;
   remindDayBefore: boolean;
   remindOnDay: boolean;
+  /** Reminder times in India time, "HH:MM" (24-hour). */
+  remindWeekBeforeAt: string;
+  remindDayBeforeAt: string;
+  remindOnDayAt: string;
+  /** Send the birthday person a "happy birthday" from the room on the day. */
+  sendBirthdayWish: boolean;
+  /** New birthdays start as "celebrate" instead of waiting for an admin. */
+  autoCelebrate: boolean;
   upiAccounts: UpiAccountInput[];
 }
 
@@ -123,6 +146,7 @@ export interface Celebration {
   /** ISO date YYYY-MM-DD in Asia/Kolkata. */
   date: string;
   status: CelebrationStatus;
+  decision: CelebrationDecision;
 }
 
 /** What the surprise page shows after unwrapping. */

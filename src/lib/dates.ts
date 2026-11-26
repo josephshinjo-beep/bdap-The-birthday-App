@@ -64,6 +64,21 @@ export function daysBetween(aISO: string, bISO: string): number {
   );
 }
 
+/** The current time of day in India, "HH:MM" (24-hour). */
+export function timeIST(now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+  const get = (t: string) => parts.find((p) => p.type === t)!.value;
+  return `${get("hour")}:${get("minute")}`;
+}
+
+/** "18:00" → "6:00 PM". */
+export function formatTime(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const suffix = h! >= 12 ? "PM" : "AM";
+  const hour = h! % 12 === 0 ? 12 : h! % 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
 /** Midnight IST at the start of the given date, as an instant. */
 export function startOfDayIST(iso: string): Date {
   return new Date(`${iso}T00:00:00${IST_OFFSET}`);
@@ -106,10 +121,3 @@ export function countdownTo(target: Date, now: Date = new Date()): Countdown {
     done: ms === 0,
   };
 }
-
-/** Reminder slots, in IST. */
-export const REMINDER_SLOTS = {
-  evening: { label: "6:00 PM", kinds: ["week_before", "day_before"] as const },
-  morning: { label: "7:30 AM", kinds: ["on_day"] as const },
-};
-export type ReminderSlot = keyof typeof REMINDER_SLOTS;

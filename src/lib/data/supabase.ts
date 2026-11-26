@@ -2,6 +2,8 @@
 // Real data layer: Supabase with RLS. Cross-user reads and writes go through
 // the SECURITY DEFINER RPCs in supabase/migrations. Backend-owned file.
 
+import { addDays, todayIST } from "@/lib/dates";
+import { DECISION_WINDOW_DAYS } from "@/lib/reminders";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import {
   DataError,
@@ -13,6 +15,7 @@ import {
   type Payer,
   type Pool,
   type Room,
+  type RoomSettingsInput,
   type RoomSummary,
   type Session,
   type Surprise,
@@ -64,7 +67,23 @@ async function memberNames(roomId: string): Promise<Map<string, string>> {
 }
 
 function toCelebration(r: Row, names: Map<string, string>): Celebration {
-  return { id: r.id, roomId: r.room_id, birthdayUserId: r.birthday_user_id, birthdayName: names.get(r.birthday_user_id) ?? "A classmate", date: r.celebration_date, status: r.status };
+  return {
+    id: r.id, roomId: r.room_id, birthdayUserId: r.birthday_user_id, birthdayName: names.get(r.birthday_user_id) ?? "A classmate",
+    date: r.celebration_date, status: r.status, decision: r.decision ?? "pending",
+  };
+}
+
+/** Postgres `time` comes back as "HH:MM:SS". */
+const hhmm = (t: string | null | undefined, fallback: string) => (t ? String(t).slice(0, 5) : fallback);
+
+function roomSettingsRow(input: RoomSettingsInput): Row {
+  return {
+    name: input.name.trim(), amount_mode: input.amountMode, amount: input.amountMode === "any" ? null : input.amount,
+    payers_per_upi: input.payersPerUpi, remind_week_before: input.remindWeekBefore,
+    remind_day_before: input.remindDayBefore, remind_on_day: input.remindOnDay,
+    remind_week_before_at: input.remindWeekBeforeAt, remind_day_before_at: input.remindDayBeforeAt,
+    remind_on_day_at: input.remindOnDayAt, send_birthday_wish: input.sendBirthdayWish, auto_celebrate: input.autoCelebrate,
+  };
 }
 
 let channelSeq = 0;
@@ -154,7 +173,10 @@ export const supabaseApi: DataApi = {
     return {
       id: r.id, name: r.name, code: admin ? r.code : null, amountMode: r.amount_mode, amount: r.amount,
       payersPerUpi: r.payers_per_upi, remindWeekBefore: r.remind_week_before, remindDayBefore: r.remind_day_before,
-      remindOnDay: r.remind_on_day, createdBy: r.created_by, myRole: m.role, myStatus: m.status,
+      remindOnDay: r.remind_on_day, remindWeekBeforeAt: hhmm(r.remind_week_before_at, "18:00"),
+      remindDayBeforeAt: hhmm(r.remind_day_before_at, "18:00"), remindOnDayAt: hhmm(r.remind_on_day_at, "07:30"),
+      sendBirthdayWish: r.send_birthday_wish ?? true, autoCelebrate: r.auto_celebrate ?? false,
+      createdBy: r.created_by, myRole: m.role, myStatus: m.status,
     };
   },
 
@@ -171,16 +193,16 @@ export const supabaseApi: DataApi = {
     });
     if (error) fail(error);
     const roomId = data as string;
+    // create_room() sets the basics; the reminder times and approval options go in here.
+    const { upiAccounts: _upi, ...settings } = input;
+    const { error: settingsError } = await sb().from("rooms").update(roomSettingsRow(settings)).eq("id", roomId);
+    if (settingsError) fail(settingsError);
     const { data: r } = await sb().from("rooms").select("code").eq("id", roomId).single();
     return { roomId, code: r?.code as string };
   },
 
   async updateRoom(roomId, input) {
-    const { error } = await sb().from("rooms").update({
-      name: input.name.trim(), amount_mode: input.amountMode, amount: input.amountMode === "any" ? null : input.amount,
-      payers_per_upi: input.payersPerUpi, remind_week_before: input.remindWeekBefore,
-      remind_day_before: input.remindDayBefore, remind_on_day: input.remindOnDay,
-    }).eq("id", roomId);
+    const { error } = await sb().from("rooms").update(roomSettingsRow(input)).eq("id", roomId);
     if (error) fail(error);
   },
 
@@ -188,6 +210,11 @@ export const supabaseApi: DataApi = {
     const { data, error } = await sb().rpc("regenerate_room_code", { p_room: roomId });
     if (error) fail(error);
     return data as string;
+  },
+
+  async deleteRoom(roomId) {
+    const { error } = await sb().rpc("delete_room", { p_room: roomId });
+    if (error) fail(error);
   },
 
   async leaveRoom(roomId) {
@@ -272,6 +299,11 @@ export const supabaseApi: DataApi = {
     if (error) fail(error);
   },
 
+  async deleteUpiAccount(roomId, accountId) {
+    const { error } = await sb().from("room_upi_accounts").delete().eq("id", accountId).eq("room_id", roomId);
+    if (error) fail(error);
+  },
+
   async uploadQrImage(roomId, file) {
     const me = await uid();
     const ext = (file.name.split(".").pop() ?? "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
@@ -282,14 +314,31 @@ export const supabaseApi: DataApi = {
   },
 
   async upcomingCelebrations(roomId) {
-    // Make sure birthdays in the next week have a celebration row even before the cron runs.
+    // Make sure upcoming birthdays have a celebration row even before the job runs.
     await sb().rpc("ensure_room_celebrations", { p_room: roomId });
     const [{ data, error }, names] = await Promise.all([
-      sb().from("celebrations").select("*").eq("room_id", roomId).in("status", ["upcoming", "live"]).order("celebration_date"),
+      sb().from("celebrations").select("*").eq("room_id", roomId).eq("decision", "celebrate")
+        .in("status", ["upcoming", "live"]).lte("celebration_date", addDays(todayIST(), 7)).order("celebration_date"),
       memberNames(roomId),
     ]);
     if (error) fail(error);
     return (data as Row[]).map((r) => toCelebration(r, names));
+  },
+
+  async adminCelebrations(roomId) {
+    await sb().rpc("ensure_room_celebrations", { p_room: roomId });
+    const [{ data, error }, names] = await Promise.all([
+      sb().from("celebrations").select("*").eq("room_id", roomId).in("status", ["upcoming", "live"])
+        .lte("celebration_date", addDays(todayIST(), DECISION_WINDOW_DAYS)).order("celebration_date"),
+      memberNames(roomId),
+    ]);
+    if (error) fail(error);
+    return (data as Row[]).map((r) => toCelebration(r, names));
+  },
+
+  async setCelebrationDecision(celebrationId, decision) {
+    const { error } = await sb().rpc("set_celebration_decision", { p_celebration: celebrationId, p_decision: decision });
+    if (error) fail(error);
   },
 
   async getCelebration(id) {

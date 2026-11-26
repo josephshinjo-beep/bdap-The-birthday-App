@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
 import { CodeTicket } from "@/components/code-ticket";
@@ -66,6 +66,11 @@ function Edit({
     remindWeekBefore: room.remindWeekBefore,
     remindDayBefore: room.remindDayBefore,
     remindOnDay: room.remindOnDay,
+    remindWeekBeforeAt: room.remindWeekBeforeAt,
+    remindDayBeforeAt: room.remindDayBeforeAt,
+    remindOnDayAt: room.remindOnDayAt,
+    sendBirthdayWish: room.sendBirthdayWish,
+    autoCelebrate: room.autoCelebrate,
   });
   const [code, setCode] = useState(room.code ?? "");
   const [saved, setSaved] = useState(false);
@@ -189,10 +194,60 @@ function Edit({
                 </button>
               )}
             </section>
+
+            {isModerator && <DeleteRoom room={room} />}
           </>
         }
       />
     </Page>
+  );
+}
+
+/** Moderator only: type the room name to delete it for good. */
+function DeleteRoom({ room }: { room: Room }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const matches = typed.trim() === room.name.trim();
+
+  async function remove() {
+    setBusy(true);
+    setError(null);
+    try {
+      await data.deleteRoom(room.id);
+      router.replace("/rooms");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't delete the room.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section aria-labelledby="danger" className="card card-danger flex flex-col gap-2">
+      <h2 id="danger" className="label !text-danger">Delete room</h2>
+      <p className="text-[13px]">Removes the room for everyone: members, birthdays, celebrations, the pool records and UPI IDs. This can&apos;t be undone.</p>
+      {open ? (
+        <>
+          <label htmlFor="confirm-delete" className="text-[13px] font-bold">
+            Type <span className="font-mono">{room.name}</span> to confirm
+          </label>
+          <input id="confirm-delete" className="field" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
+          <div className="flex gap-2">
+            <button type="button" className="btn-secondary btn-sm !border-danger !text-danger" disabled={!matches || busy} onClick={remove}>
+              {busy ? "Deleting…" : "Delete room forever"}
+            </button>
+            <button type="button" className="btn-secondary btn-sm" onClick={() => { setOpen(false); setTyped(""); }}>Cancel</button>
+          </div>
+        </>
+      ) : (
+        <button type="button" className="btn-secondary btn-sm self-start !border-danger !text-danger" onClick={() => setOpen(true)}>
+          Delete this room
+        </button>
+      )}
+      <ErrorNote>{error}</ErrorNote>
+    </section>
   );
 }
 
@@ -218,6 +273,18 @@ function ExistingUpi({
   });
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  async function remove() {
+    setError(null);
+    try {
+      await data.deleteUpiAccount(roomId, account.id);
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't delete it.");
+    }
+  }
+
   const dirty = draft.upiId !== account.upiId || draft.payeeName !== account.payeeName || draft.ownerUserId !== account.ownerUserId || draft.qrImageUrl !== account.qrImageUrl;
 
   async function run(patch: Parameters<typeof data.updateUpiAccount>[2]) {
@@ -251,6 +318,16 @@ function ExistingUpi({
         <button type="button" className="btn-secondary btn-sm" onClick={() => run({ active: !account.active })}>
           {account.active ? "Pause this UPI ID" : "Turn back on"}
         </button>
+        {confirmDelete ? (
+          <>
+            <button type="button" className="btn-secondary btn-sm !border-danger !text-danger" onClick={remove}>Delete for good</button>
+            <button type="button" className="btn-secondary btn-sm" onClick={() => setConfirmDelete(false)}>Keep</button>
+          </>
+        ) : (
+          <button type="button" className="btn-secondary btn-sm !border-danger !text-danger" onClick={() => setConfirmDelete(true)} aria-label={`Delete UPI ID ${account.upiId}`}>
+            Delete
+          </button>
+        )}
         {state === "saved" && (
           <span className="self-center text-sm font-bold text-ok" role="status">
             Saved ✓

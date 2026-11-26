@@ -3,6 +3,7 @@ import { useId, useRef, useState } from "react";
 import { data } from "@/lib/data";
 import { isValidUpiId } from "@/lib/upi";
 import type { AmountMode, Member, RoomSettingsInput } from "@/lib/types";
+import { formatTime } from "@/lib/dates";
 import { ErrorNote, Toggle } from "./ui";
 
 export const DEFAULT_SETTINGS: RoomSettingsInput = {
@@ -13,6 +14,11 @@ export const DEFAULT_SETTINGS: RoomSettingsInput = {
   remindWeekBefore: false,
   remindDayBefore: true,
   remindOnDay: true,
+  remindWeekBeforeAt: "18:00",
+  remindDayBeforeAt: "18:00",
+  remindOnDayAt: "07:30",
+  sendBirthdayWish: true,
+  autoCelebrate: false,
 };
 
 const MODES: { id: AmountMode; label: string; hint: string }[] = [
@@ -94,11 +100,48 @@ export function RoomSettingsFields({ value, onChange }: { value: RoomSettingsInp
       <p id={ids.payersHint} className="hint -mt-2.5">Once a UPI ID has this many people, the next payer gets the next UPI ID.</p>
 
       <fieldset className="card">
-        <legend className="sr-only">Secret reminders</legend>
-        <span className="label" aria-hidden="true">Secret reminders</span>
-        <Toggle label="Day before, 6:00 PM" checked={value.remindDayBefore} onChange={(v) => set("remindDayBefore", v)} />
-        <Toggle label="On the day, 7:30 AM" checked={value.remindOnDay} onChange={(v) => set("remindOnDay", v)} />
-        <Toggle label="A week before (to plan)" checked={value.remindWeekBefore} onChange={(v) => set("remindWeekBefore", v)} />
+        <legend className="sr-only">Reminders and their times</legend>
+        <span className="label" aria-hidden="true">Reminders · India time</span>
+        <p className="hint">Only sent for birthdays an admin approves. Times are when they go out (within 15 minutes).</p>
+        <ReminderRow
+          label="A week before (to plan)"
+          on={value.remindWeekBefore}
+          time={value.remindWeekBeforeAt}
+          onToggle={(v) => set("remindWeekBefore", v)}
+          onTime={(v) => set("remindWeekBeforeAt", v)}
+        />
+        <ReminderRow
+          label="The day before"
+          on={value.remindDayBefore}
+          time={value.remindDayBeforeAt}
+          onToggle={(v) => set("remindDayBefore", v)}
+          onTime={(v) => set("remindDayBeforeAt", v)}
+        />
+        <ReminderRow
+          label="On the day"
+          hint="Also when the birthday wish goes out."
+          on={value.remindOnDay}
+          time={value.remindOnDayAt}
+          onToggle={(v) => set("remindOnDay", v)}
+          onTime={(v) => set("remindOnDayAt", v)}
+        />
+      </fieldset>
+
+      <fieldset className="card">
+        <legend className="sr-only">Celebration approval</legend>
+        <span className="label" aria-hidden="true">Celebration approval</span>
+        <Toggle
+          label="Celebrate every birthday automatically"
+          hint={value.autoCelebrate ? "Every birthday gets reminders and a UPI collection." : "An admin approves each birthday. Until then, nothing goes out except a birthday wish."}
+          checked={value.autoCelebrate}
+          onChange={(v) => set("autoCelebrate", v)}
+        />
+        <Toggle
+          label="Send a birthday wish"
+          hint="On the day, the birthday person gets a “Happy birthday” from the room."
+          checked={value.sendBirthdayWish}
+          onChange={(v) => set("sendBirthdayWish", v)}
+        />
       </fieldset>
     </div>
   );
@@ -208,4 +251,26 @@ export function ownerOptions(members: Member[], meId: string) {
     ...members.filter((m) => m.status === "approved").map((m) => ({ id: m.userId as string | null, label: m.userId === meId ? `Me (${m.fullName})` : m.fullName })),
     { id: null, label: "Not a member of this room" },
   ];
+}
+
+/** One reminder: on/off switch plus the time it goes out. */
+function ReminderRow({ label, hint, on, time, onToggle, onTime }: { label: string; hint?: string; on: boolean; time: string; onToggle: (v: boolean) => void; onTime: (v: string) => void }) {
+  const id = useId();
+  return (
+    <div className="flex items-center gap-3 border-t border-dashed border-line pt-1 first-of-type:border-0">
+      <div className="min-w-0 flex-1">
+        <Toggle label={label} hint={on ? `${hint ? hint + " " : ""}Sends at ${formatTime(time)}.` : hint ?? "Off"} checked={on} onChange={onToggle} />
+      </div>
+      <label htmlFor={id} className="sr-only">{label} time</label>
+      <input
+        id={id}
+        type="time"
+        step={900}
+        className="field !min-h-10 w-[118px] shrink-0 !px-2 !py-1.5 text-sm disabled:opacity-40"
+        value={time}
+        disabled={!on}
+        onChange={(e) => e.target.value && onTime(e.target.value.slice(0, 5))}
+      />
+    </div>
+  );
 }

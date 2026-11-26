@@ -33,8 +33,10 @@ bdap is a birthday app for college classes. It reminds everyone the evening befo
 
 1. **Join with a code.** The class rep creates a room and shares a 6-character code. Classmates type it in and add their name, username and date of birth.
 2. **The moderator lets you in.** Only people the moderator (or a co-moderator) approves can see the room.
-3. **A secret heads-up.** At 6:00 PM the day before a birthday, everyone in the room gets a reminder. Everyone except the birthday person.
-4. **Chip in with UPI.** Tap the gift three times, scratch the card, and pay from any UPI app. Everyone watches the pool fill up.
+3. **The admins decide.** A month ahead, the room's admins choose for each birthday: **Celebrate** (secret reminders and a UPI collection) or **Just wish**.
+4. **A secret heads-up.** For approved birthdays, everyone gets a reminder at the times the admins chose (6:00 PM the evening before by default). Everyone except the birthday person.
+5. **Chip in with UPI.** Tap the gift three times, scratch the card, and pay from any UPI app. Everyone watches the pool fill up.
+6. **Happy birthday!** On the day, the birthday person gets a wish from the room, whether or not there was a collection.
 
 ## Features
 
@@ -50,8 +52,8 @@ bdap is a birthday app for college classes. It reminds everyone the evening befo
 | My rooms | `/rooms` | Every room you're in: class, hostel, club |
 | Room | `/rooms/[id]` | Tabs for Upcoming / Members / Me, next secret celebration with a live countdown, upcoming birthdays |
 | Create room | `/create` | Name, UPI IDs (with owner and optional QR image), amount mode, payers per UPI ID, reminder switches; ends with the room code as a ticket |
-| Moderator dashboard | `/rooms/[id]/manage` | Code ticket with copy and share, join requests (Let in / Decline), members, co-moderators, remove, view as member |
-| Edit room | `/rooms/[id]/manage/edit` | All settings, manage and pause UPI IDs, co-moderators, "Make a new code" |
+| Admin dashboard | `/rooms/[id]/manage` | Tabs: **Overview** (stats, alerts, join requests, code, reminder summary), **Birthdays** (approve Celebrate / Just wish / undo for the next 30 days), **Members** (let in, decline, co-moderators, remove), **Settings** (shortcuts) |
+| Edit room | `/rooms/[id]/manage/edit` | All settings, custom reminder times, auto-approve, birthday wish, add / edit / pause / delete UPI IDs, co-moderators, "Make a new code", delete the room |
 | Profile | `/me` | Edit profile, turn push notifications on or off, log out |
 
 ### Secret reminders and UPI (Milestone 2)
@@ -61,7 +63,17 @@ bdap is a birthday app for college classes. It reminds everyone the evening befo
 - **Pool**: everyone sees "10 of 21 chipped in · ₹650". Moderators also see who paid.
 - **Notification bell** with an unread count and a live feed.
 - **Web Push** reminders, with "Add to Home Screen" steps for iPhone.
-- **Scheduled job** at 6:00 PM and 7:30 AM IST.
+- **Scheduled job** every 15 minutes; each room's own reminder times decide what goes out.
+
+### Admin controls
+
+Each room's moderator and co-moderators get a dashboard to run it:
+
+- **Approve each birthday.** Nothing about a celebration reaches the class until an admin picks **Celebrate**. **Just wish** (or no decision) means no reminders and no collection; on the day the class gets a nudge to wish them. Admins are asked a month ahead, can change their mind or undo, and never see or decide their own birthday.
+- **Auto-approve** (optional): every new birthday starts as Celebrate.
+- **Custom reminder times** in India time for the week-before, day-before and on-the-day reminders, each with its own on/off switch.
+- **Birthday wish**: on the day, the birthday person gets a "Happy birthday" from the room (can be switched off).
+- **Edit and delete everything**: room settings, UPI IDs (add, edit, pause, delete), members (remove, co-moderator), the room code, and the room itself (moderator only, by typing its name).
 
 ### Rules the app follows
 
@@ -165,8 +177,8 @@ bdap/
  Vercel (Next.js server)
    /auth/callback          exchanges the Google code for a session cookie
    /api/push               stores push subscriptions (after checking the session)
-   /api/cron/reminders ◄── pg_cron + pg_net at 6:00 PM and 7:30 AM IST
-        └─ prepare_reminders() → notifications → Web Push to each device
+   /api/cron/reminders ◄── pg_cron + pg_net every 15 minutes
+        └─ prepare_due_reminders() → notifications → Web Push to each device
 ```
 
 - **Pages never talk to Supabase directly.** They call `data.*`, which is either the mock or the Supabase implementation. That's how the frontend works without waiting on the backend.
@@ -178,17 +190,17 @@ bdap/
 | Table | Purpose |
 |---|---|
 | `profiles` | Full name, username, date of birth, avatar. Readable only by its owner. |
-| `rooms` | Name, 6-character code, amount mode and amount, payers per UPI ID, reminder switches |
+| `rooms` | Name, 6-character code, amount mode and amount, payers per UPI ID, reminder switches and times, birthday wish, auto-approve |
 | `memberships` | Who is in which room, with role (moderator, co_moderator, member) and status (pending, approved, declined) |
 | `room_upi_accounts` | A room's UPI IDs, each with a payee name, owner, optional QR image, order and on/off switch |
-| `celebrations` | One per room, birthday person and date: upcoming → live → done |
+| `celebrations` | One per room, birthday person and date: upcoming → live → done, plus the admins' decision (pending, celebrate, wish_only) |
 | `contributions` | Which UPI ID each payer was given, and whether they ticked "paid" |
 | `notifications` | The in-app feed; one reminder per person, celebration and kind |
 | `push_subscriptions` | Each device's Web Push endpoint |
 
 Room codes use `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, so there's no O/0 or I/1 mix-up.
 
-**Main functions (RPCs):** `username_available`, `preview_room`, `request_join`, `create_room`, `regenerate_room_code`, `decide_request`, `set_member_role`, `remove_member`, `room_members`, `ensure_room_celebrations`, `open_surprise`, `mark_paid`, `celebration_pool`, `celebration_payers`, and `prepare_reminders` (server only).
+**Main functions (RPCs):** `username_available`, `preview_room`, `request_join`, `create_room`, `regenerate_room_code`, `decide_request`, `set_member_role`, `remove_member`, `room_members`, `ensure_room_celebrations`, `open_surprise`, `mark_paid`, `celebration_pool`, `celebration_payers`, `set_celebration_decision`, `delete_room`, and `prepare_due_reminders` (server only).
 
 ## How the secret is kept
 
@@ -196,6 +208,7 @@ Room codes use `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, so there's no O/0 or I/1 mix-u
 - **Profiles are private.** Classmates see others only through `room_members()`, which returns the birth day and month, never the year.
 - **The birthday person can't see their celebration.** The `celebrations` policy requires `birthday_user_id <> auth.uid()`. `open_surprise`, `mark_paid`, `celebration_pool` and `celebration_payers` refuse them too. Their own surprise link shows a plain "Nothing here" page that gives nothing away.
 - **No reminders go to the birthday person**, and the moderator's own birthday is covered too.
+- **Members only see approved celebrations.** Until an admin chooses Celebrate, the celebration, surprise page, pool and UPI QR are hidden from members (enforced in the database, not just the app).
 - **Anything that affects other people goes through functions**, never direct table writes: approving, roles, codes and UPI assignment. Admins can edit room settings, but the column grants stop them changing the code or owner directly.
 - **Only moderators see who paid.** Everyone else sees the total.
 - **Safe redirects.** After login you can only be sent to a page on this site.
@@ -217,17 +230,18 @@ The QR encodes `upi://pay?pa=<upi>&pn=<payee>&am=<amount>&cu=INR&tn=<Name> birth
 
 ## Reminders and push notifications
 
-| Slot | Time (IST) | Sends |
-|---|---|---|
-| `evening` | 6:00 PM | "A week to go" (if switched on) and "Tomorrow" |
-| `morning` | 7:30 AM | "Today!" |
+The job runs every 15 minutes. A notification goes out once its day has come and the room's chosen time has passed:
 
-Each run:
+| Notification | Who gets it | When (room default) | Only if |
+|---|---|---|---|
+| "Celebrate X's birthday?" | Admins (not the birthday person) | As soon as a birthday is 30 days away | Not decided yet |
+| "X's birthday is in a week" | Members | 7 days before, 6:00 PM | Approved, switch on |
+| "Psst. X's birthday is tomorrow" | Members | Day before, 6:00 PM | Approved, switch on |
+| "Today is X's birthday!" | Members | On the day, 7:30 AM | Approved, switch on |
+| "It's X's birthday today 🎂" (wish nudge) | Members | On the day, 7:30 AM | **Not** approved |
+| "Happy birthday, X! 🎉" | The birthday person | On the day, 7:30 AM | Birthday wish on |
 
-1. Creates celebrations for birthdays in the next 7 days.
-2. Moves statuses along: upcoming → live on the day → done after.
-3. Adds a reminder for every approved member except the birthday person. This is idempotent, so running twice never sends twice.
-4. Sends Web Push to their devices, and deletes subscriptions the push service says are gone (404/410).
+Each run also creates celebrations for the next 30 days (as Celebrate if the room auto-approves) and moves statuses along: upcoming → live on the day → done after. Sending is idempotent (one per person, birthday and kind), so running often never sends twice. Pushes go to every device, and subscriptions the push service says are gone (404/410) are deleted. The same rules live in `dueReminders()` in `src/lib/reminders.ts` with unit tests.
 
 **iPhone:** push works only after **Share → Add to Home Screen**, on iOS 16.4 or newer. The app shows these steps.
 
@@ -236,7 +250,7 @@ Each run:
 ### 1. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In the **SQL editor**, run the four files in `supabase/migrations/` in order: `…_init.sql`, `…_hardening.sql`, `…_grants.sql`, then `…_fix_upi_regex.sql` (or use `supabase db push` with the Supabase CLI). This creates the tables, security rules and functions, turns on Realtime, and creates the `upi-qr` storage bucket.
+2. In the **SQL editor**, run the six files in `supabase/migrations/` in name order: `…_init.sql`, `…_hardening.sql`, `…_grants.sql`, `…_fix_upi_regex.sql`, `…_notification_kinds.sql`, then `…_admin_controls.sql` (or use `supabase db push` with the Supabase CLI). This creates the tables, security rules and functions, turns on Realtime, and creates the `upi-qr` storage bucket.
 3. **Authentication → Providers → Google:** turn it on and paste a Google OAuth client ID and secret (from Google Cloud Console → APIs & Services → Credentials). In Google Cloud, add Supabase's callback URL (shown on that Supabase screen) as an authorised redirect URI.
 4. **Authentication → URL configuration:** set the Site URL to your domain, and add these redirect URLs:
    - `https://<your-domain>/auth/callback`
@@ -264,22 +278,23 @@ The public key goes in `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, the private key in `VAPID
 ### 5. Reminder schedule
 
 1. In Supabase → **Database → Extensions**, turn on `pg_cron` and `pg_net`.
-2. Open `supabase/cron.sql`, replace the site URL and secret placeholders, and run it in the SQL editor.
-3. `vercel.json` schedules the same two jobs on Vercel Cron as a backup. Its free tier is only accurate to the hour, but double runs are harmless.
+2. Open `supabase/cron.sql`, replace the site URL and secret placeholders, and run it in the SQL editor. It schedules the job every 15 minutes. (If you ran an older version, unschedule `bdap-evening-reminders` and `bdap-morning-reminders` as the file shows.)
+3. `vercel.json` also runs the job twice a day on Vercel Cron as a backup. Double runs are harmless.
 
-**Rehearse a reminder** without waiting for 6 PM:
+**Rehearse a reminder** without waiting:
 
 ```bash
-curl -X POST "https://<your-domain>/api/cron/reminders?slot=evening" \
+curl -X POST "https://<your-domain>/api/cron/reminders" \
   -H "Authorization: Bearer <CRON_SECRET>"
 ```
 
-Add `&date=YYYY-MM-DD` to pretend it's another day. The reply lists how many notifications and pushes went out.
+Add `?at=2026-11-26T18:05:00%2B05:30` to pretend it's another moment (here 6:05 PM IST). The reply lists how many notifications and pushes went out.
 
 ### Launch checklist
 
 - [ ] The owner creates a room, 3 friends join, the owner approves 2 and declines 1, and the approved ones land in the room automatically.
-- [ ] With a test birthday set to tomorrow, everyone except that person gets the 6 PM reminder and can unwrap the QR.
+- [ ] With a test birthday set to tomorrow and approved with Celebrate, everyone except that person gets the day-before reminder at the room's time and can unwrap the QR.
+- [ ] A birthday set to Just wish sends no reminders or collection, and on the day the birthday person gets the wish.
 - [ ] The 21st payer is given the second UPI ID.
 
 ## Environment variables
@@ -318,6 +333,7 @@ Unit tests cover the logic that must never be wrong:
 - `src/lib/upi.test.ts`: UPI rotation (order, the 21st payer, skipping the birthday person's UPI ID, paused IDs, all-full fallback) and UPI links.
 - `src/lib/dates.test.ts`: India time, next birthday, the 29 Feb rule, countdowns, and that no year is ever shown.
 - `src/lib/safe-next.test.ts`: post-login redirects can't leave the site.
+- `src/lib/reminders.test.ts`: nothing goes to members before approval, custom times, wish-only days, the birthday wish, and when admins are asked.
 
 The flows themselves are easiest to check in mock mode with the demo users (see [Quick start](#quick-start-no-backend-needed)).
 
@@ -355,6 +371,7 @@ Ideas for after launch (the owner picks):
 | Problem | Fix |
 |---|---|
 | "permission denied for table …" | Run `supabase/migrations/20261126000000_grants.sql` in the SQL editor. |
+| Birthdays don't show up on the admin dashboard, or "function … does not exist" | Run `…_notification_kinds.sql` and then `…_admin_controls.sql` in the SQL editor. |
 | "invalid regular expression: invalid repetition count(s)" when creating a room | Run `supabase/migrations/20261126010000_fix_upi_regex.sql` in the SQL editor. |
 | Google login goes back to `/login?error=auth` | Check the redirect URLs in Supabase → Authentication → URL configuration, and that the Google provider is on. |
 | The app shows demo data in production | `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` is missing in Vercel. Redeploy after adding them. |
