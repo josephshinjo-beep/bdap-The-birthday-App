@@ -7,7 +7,7 @@
 -- admins) decide what is sent, so reminders go out within 15 minutes of the
 -- chosen time.
 
-select vault.create_secret('https://YOUR-SUBDOMAIN.example.com', 'bdap_site_url');
+select vault.create_secret('https://bdap.surf', 'bdap_site_url');
 select vault.create_secret('PASTE_THE_SAME_VALUE_AS_CRON_SECRET', 'bdap_cron_secret');
 
 create or replace function public.call_reminder_job()

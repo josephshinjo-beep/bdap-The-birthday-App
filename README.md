@@ -305,8 +305,8 @@ Birthday reminders (a week before, the day before, on the day), the birthday wis
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the **SQL editor**, run the nine files in `supabase/migrations/` in name order: `…_init.sql`, `…_hardening.sql`, `…_grants.sql`, `…_fix_upi_regex.sql`, `…_notification_kinds.sql`, `…_admin_controls.sql`, `…_lock_dob.sql`, `…_more_enum_values.sql`, then `…_expenses_polls_wall.sql` (or use `supabase db push` with the Supabase CLI). This creates the tables, security rules and functions, turns on Realtime, and creates the `upi-qr` storage bucket.
 3. **Authentication → Providers → Google:** turn it on and paste a Google OAuth client ID and secret (from Google Cloud Console → APIs & Services → Credentials). In Google Cloud, add Supabase's callback URL (shown on that Supabase screen) as an authorised redirect URI.
-4. **Authentication → URL configuration:** set the Site URL to your domain, and add these redirect URLs:
-   - `https://<your-domain>/auth/callback`
+4. **Authentication → URL configuration:** set the Site URL to `https://bdap.surf`, and add these redirect URLs:
+   - `https://bdap.surf/auth/callback`
    - `http://localhost:3000/auth/callback`
 
 ### 2. Push keys
@@ -322,22 +322,45 @@ The public key goes in `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, the private key in `VAPID
 1. Import the GitHub repo in Vercel.
 2. Add every variable from [Environment variables](#environment-variables). Put `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PRIVATE_KEY` and `CRON_SECRET` only in Vercel, never in the code or a chat.
 3. Deploy.
+4. **After changing any variable, redeploy.** `NEXT_PUBLIC_…` values are built into the app, so open Deployments → latest Production deployment → ⋯ → **Redeploy**, with **Use existing Build Cache** unticked (or push a commit to `master`).
 
 ### 4. Domain on Cloudflare
 
-1. In Vercel → Project → Domains, add your subdomain (for example `bdap.example.com`).
-2. In Cloudflare DNS, add a `CNAME` record from that subdomain to `cname.vercel-dns.com`, set to **DNS only** (grey cloud) so Vercel can issue the certificate.
+1. In Vercel → Project → Domains, add `bdap.surf` (production domain).
+2. In Cloudflare DNS, add a `CNAME` record for `bdap.surf` to `cname.vercel-dns.com`, set to **DNS only** (grey cloud) so Vercel can issue the certificate.
 
 ### 5. Reminder schedule
 
 1. In Supabase → **Database → Extensions**, turn on `pg_cron` and `pg_net`.
-2. Open `supabase/cron.sql`, replace the site URL and secret placeholders, and run it in the SQL editor. It schedules the job every 15 minutes. (If you ran an older version, unschedule `bdap-evening-reminders` and `bdap-morning-reminders` as the file shows.)
+2. Open `supabase/cron.sql`, replace the `CRON_SECRET` placeholder with the same value you set in Vercel, and run it in the SQL editor. It stores the site URL (`https://bdap.surf`) and the secret in Supabase Vault and schedules the job every 15 minutes. (If you ran an older version, unschedule `bdap-evening-reminders` and `bdap-morning-reminders` as the file shows.)
 3. `vercel.json` also runs the job twice a day on Vercel Cron as a backup. Double runs are harmless.
+
+The site URL must be the address the site finally loads on, with `https://` and no trailing slash: if `bdap.surf` redirects to `www.bdap.surf` (or the other way round), store the final one. To change a stored value later:
+
+```sql
+select vault.update_secret((select id from vault.secrets where name = 'bdap_site_url'), 'https://bdap.surf');
+select vault.update_secret((select id from vault.secrets where name = 'bdap_cron_secret'), '<CRON_SECRET>');
+```
+
+**Check the job** by running it once by hand, then reading the reply a few seconds later:
+
+```sql
+select public.call_reminder_job();
+select status_code, content, created from net._http_response order by created desc limit 5;
+select status, return_message, start_time from cron.job_run_details order by start_time desc limit 5;
+```
+
+| Reply | Meaning |
+|---|---|
+| `200`, `"push":{"sent":1+,"failed":0}` | Cron, secret and push keys all work |
+| `200`, `"notifications":0` | Working, but nothing was due right now |
+| `401` | Vault secret doesn't match `CRON_SECRET` in Vercel, or it's under 16 characters |
+| `404` or no row | Wrong site URL, or `pg_net` isn't enabled |
 
 **Rehearse a reminder** without waiting:
 
 ```bash
-curl -X POST "https://<your-domain>/api/cron/reminders" \
+curl -X POST "https://bdap.surf/api/cron/reminders" \
   -H "Authorization: Bearer <CRON_SECRET>"
 ```
 
@@ -363,7 +386,7 @@ Copy `.env.example` to `.env.local` for local work. Leave the Supabase values em
 | `VAPID_PRIVATE_KEY` | **server only** | Web Push private key |
 | `VAPID_SUBJECT` | server | `mailto:` address push services can contact |
 | `CRON_SECRET` | **server only** | At least 16 random characters (32+ recommended); the same value goes in `supabase/cron.sql` |
-| `NEXT_PUBLIC_SITE_URL` | browser + server | Your public URL, e.g. `https://bdap.example.com` |
+| `NEXT_PUBLIC_SITE_URL` | browser + server | Your public URL: `https://bdap.surf` (redeploy after changing it) |
 | `NEXT_PUBLIC_DATA_MODE` | optional | Set to `mock` to force sample data even with Supabase keys |
 
 ## Scripts
