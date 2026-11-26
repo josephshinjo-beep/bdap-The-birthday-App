@@ -421,7 +421,8 @@ export const mockApi: DataApi = {
     if (!/^[a-z0-9._]{3,24}$/.test(name)) throw new DataError("invalid_input", "Username must be 3–24 characters: a–z, 0–9, dot or underscore.");
     if (store.profiles.some((p) => p.username === name && p.id !== id)) throw new DataError("username_taken");
     const existing = store.profiles.find((p) => p.id === id);
-    if (existing) Object.assign(existing, { fullName: input.fullName.trim(), username: name, dob: input.dob });
+    // Date of birth is locked once saved (as in the database).
+    if (existing) Object.assign(existing, { fullName: input.fullName.trim(), username: name });
     else store.profiles.push({ id, fullName: input.fullName.trim(), username: name, dob: input.dob, avatarUrl: null });
     persist(store);
   },

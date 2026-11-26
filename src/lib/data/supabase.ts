@@ -134,8 +134,10 @@ export const supabaseApi: DataApi = {
     // (No upsert: that would also try to update `id`, which users may not change.)
     const { data: existing, error: readError } = await sb().from("profiles").select("id").eq("id", id).maybeSingle();
     if (readError) fail(readError);
+    // The date of birth is locked once saved, so updates never send it.
+    const { dob: _dob, ...editable } = fields;
     const { error } = existing
-      ? await sb().from("profiles").update(fields).eq("id", id)
+      ? await sb().from("profiles").update(editable).eq("id", id)
       : await sb().from("profiles").insert({ id, ...fields });
     if (error) fail(error);
   },

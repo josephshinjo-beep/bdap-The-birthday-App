@@ -17,10 +17,13 @@ type Availability = "idle" | "checking" | "free" | "taken" | "invalid";
 export function ProfileForm({
   initial,
   submitLabel,
+  lockDob = false,
   onSaved,
 }: {
   initial?: Partial<ProfileInput>;
   submitLabel: string;
+  /** Show the date of birth read-only (it can't change once saved). */
+  lockDob?: boolean;
   onSaved: (input: ProfileInput) => void | Promise<void>;
 }) {
   const ids = { name: useId(), user: useId(), userHint: useId(), dob: useId(), dobHint: useId() };
@@ -133,8 +136,17 @@ export function ProfileForm({
       </div>
       <div>
         <label htmlFor={ids.dob} className="label">Date of birth</label>
-        <input id={ids.dob} type="date" className="field" value={dob} max={today} min="1900-01-02" aria-describedby={ids.dobHint} onChange={(e) => setDob(e.target.value)} />
-        <p id={ids.dobHint} className="hint mt-1">Classmates only see the day and month, never the year.</p>
+        {lockDob ? (
+          <>
+            <input id={ids.dob} type="date" className="field cursor-not-allowed bg-surface-2 text-muted" value={dob} readOnly aria-readonly="true" aria-describedby={ids.dobHint} />
+            <p id={ids.dobHint} className="hint mt-1">🔒 Your birthday is locked once saved, so it can&apos;t be changed here. Classmates only see the day and month.</p>
+          </>
+        ) : (
+          <>
+            <input id={ids.dob} type="date" className="field" value={dob} max={today} min="1900-01-02" aria-describedby={ids.dobHint} onChange={(e) => setDob(e.target.value)} />
+            <p id={ids.dobHint} className="hint mt-1">Classmates only see the day and month, never the year. <b className="text-plum">Check it carefully: you can&apos;t change it later.</b></p>
+          </>
+        )}
       </div>
       <ErrorNote>{error}</ErrorNote>
       <button type="submit" className="btn w-full" disabled={!canSubmit}>

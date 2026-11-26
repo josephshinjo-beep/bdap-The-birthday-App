@@ -40,6 +40,7 @@ function Me({ session }: { session: Session }) {
         <div>
           <ProfileForm
             initial={{ fullName: p.fullName, username: p.username, dob: p.dob }}
+            lockDob
             submitLabel={saved ? "Saved ✓" : "Save changes"}
             onSaved={async () => {
               await refresh();

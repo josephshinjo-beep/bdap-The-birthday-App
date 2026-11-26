@@ -78,6 +78,7 @@ Each room's moderator and co-moderators get a dashboard to run it:
 ### Rules the app follows
 
 - Only the day and month of a birthday are shown to others, never the year.
+- A date of birth is locked once saved. Nobody can change it from the app; the owner can fix a genuine mistake in the Supabase SQL editor.
 - 29 February birthdays are celebrated on 28 February in non-leap years.
 - All dates use India time (Asia/Kolkata), whatever the phone's time zone.
 - Amount mode is set per room: **fixed** (everyone pays the same), **suggested** (a nudge) or **any amount**.
@@ -250,7 +251,7 @@ Each run also creates celebrations for the next 30 days (as Celebrate if the roo
 ### 1. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In the **SQL editor**, run the six files in `supabase/migrations/` in name order: `…_init.sql`, `…_hardening.sql`, `…_grants.sql`, `…_fix_upi_regex.sql`, `…_notification_kinds.sql`, then `…_admin_controls.sql` (or use `supabase db push` with the Supabase CLI). This creates the tables, security rules and functions, turns on Realtime, and creates the `upi-qr` storage bucket.
+2. In the **SQL editor**, run the seven files in `supabase/migrations/` in name order: `…_init.sql`, `…_hardening.sql`, `…_grants.sql`, `…_fix_upi_regex.sql`, `…_notification_kinds.sql`, `…_admin_controls.sql`, then `…_lock_dob.sql` (or use `supabase db push` with the Supabase CLI). This creates the tables, security rules and functions, turns on Realtime, and creates the `upi-qr` storage bucket.
 3. **Authentication → Providers → Google:** turn it on and paste a Google OAuth client ID and secret (from Google Cloud Console → APIs & Services → Credentials). In Google Cloud, add Supabase's callback URL (shown on that Supabase screen) as an authorised redirect URI.
 4. **Authentication → URL configuration:** set the Site URL to your domain, and add these redirect URLs:
    - `https://<your-domain>/auth/callback`

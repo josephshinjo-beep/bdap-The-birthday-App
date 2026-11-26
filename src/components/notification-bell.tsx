@@ -83,7 +83,13 @@ export function NotificationBell() {
         )}
       </button>
       {open && (
-        <div ref={panel} id="notification-panel" className="card pop-in absolute right-0 top-12 z-40 w-[min(92vw,360px)] overflow-hidden p-0">
+        <div
+          ref={panel}
+          id="notification-panel"
+          // Phones: full width under the header (the bell isn't at the screen edge, so
+          // anchoring to it pushes the panel off the left side). Larger screens: drop down under the bell.
+          className="card pop-in fixed inset-x-3 top-[calc(env(safe-area-inset-top)+60px)] z-40 overflow-hidden p-0 md:absolute md:inset-x-auto md:right-0 md:top-12 md:w-[360px]"
+        >
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <p className="font-display font-bold text-plum">Notifications</p>
             {unread > 0 && (
