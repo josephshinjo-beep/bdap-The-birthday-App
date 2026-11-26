@@ -55,6 +55,8 @@ export function NotificationBell() {
   }, [open]);
 
   const unread = items.filter((n) => !n.readAt).length;
+  // Unread priority notifications (birthday reminders) are pinned first.
+  const sorted = [...items].sort((a, b) => Number(b.priority && !b.readAt) - Number(a.priority && !a.readAt));
 
   async function markAll() {
     await data.markNotificationsRead().catch(() => {});
@@ -102,7 +104,7 @@ export function NotificationBell() {
             <p className="px-4 py-6 text-center text-muted">Nothing yet. Birthday heads-ups land here.</p>
           ) : (
             <ul className="max-h-[60vh] overflow-y-auto">
-              {items.map((n) => (
+              {sorted.map((n) => (
                 <li key={n.id}>
                   <Link
                     href={n.url}
@@ -110,11 +112,14 @@ export function NotificationBell() {
                       setOpen(false);
                       if (!n.readAt) void data.markNotificationsRead([n.id]).then(() => setItems((l) => l.map((x) => (x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x))));
                     }}
-                    className="flex gap-3 border-b border-line px-4 py-3 hover:bg-surface-2"
+                    className={`flex gap-3 border-b border-line px-4 py-3 hover:bg-surface-2 ${n.priority && !n.readAt ? "bg-[var(--pill-pink-bg)]" : ""}`}
                   >
                     <span aria-hidden="true" className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${n.readAt ? "bg-transparent" : "bg-accent"}`} />
                     <span className="min-w-0">
-                      <span className="block text-sm font-bold text-plum">{n.title}</span>
+                      <span className="block text-sm font-bold text-plum">
+                        {n.priority && !n.readAt && <span className="mr-1.5 rounded-full bg-accent px-1.5 py-0.5 align-middle text-[10px] font-bold text-white">Priority</span>}
+                        {n.title}
+                      </span>
                       <span className="block text-sm text-muted">{n.body}</span>
                       <span className="block text-xs text-muted">{timeAgo(n.createdAt)}{!n.readAt && <span className="sr-only">, unread</span>}</span>
                     </span>

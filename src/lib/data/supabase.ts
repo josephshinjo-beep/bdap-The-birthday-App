@@ -4,11 +4,14 @@
 
 import { addDays, todayIST } from "@/lib/dates";
 import { DECISION_WINDOW_DAYS } from "@/lib/reminders";
+import { splitAmount } from "@/lib/split";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import {
   DataError,
+  isAdminRole,
   type AppNotification,
   type Celebration,
+  type Expense,
   type DataErrorCode,
   type Member,
   type MemberStatus,
@@ -57,19 +60,46 @@ function toUpi(r: Row): UpiAccount {
 }
 
 function toNotification(r: Row): AppNotification {
-  return { id: r.id, roomId: r.room_id, celebrationId: r.celebration_id, kind: r.kind, title: r.title, body: r.body, url: r.url, createdAt: r.created_at, readAt: r.read_at };
+  return {
+    id: r.id, roomId: r.room_id, celebrationId: r.celebration_id, kind: r.kind, title: r.title, body: r.body, url: r.url,
+    createdAt: r.created_at, readAt: r.read_at, priority: Boolean(r.priority),
+  };
 }
 
-async function memberNames(roomId: string): Promise<Map<string, string>> {
+type Names = Map<string, string> & { approvedCount?: number };
+
+async function memberNames(roomId: string): Promise<Names> {
   const { data, error } = await sb().rpc("room_members", { p_room: roomId });
   if (error) fail(error);
-  return new Map((data as Row[]).map((m) => [m.user_id as string, m.full_name as string]));
+  const rows = data as Row[];
+  const names: Names = new Map(rows.map((m) => [m.user_id as string, m.full_name as string]));
+  names.approvedCount = rows.filter((m) => m.status === "approved").length;
+  return names;
 }
 
-function toCelebration(r: Row, names: Map<string, string>): Celebration {
+function toCelebration(r: Row, names: Names): Celebration {
+  const payers = Math.max(1, (names.approvedCount ?? 1) - 1);
   return {
     id: r.id, roomId: r.room_id, birthdayUserId: r.birthday_user_id, birthdayName: names.get(r.birthday_user_id) ?? "A classmate",
     date: r.celebration_date, status: r.status, decision: r.decision ?? "pending",
+    purpose: r.purpose ?? null, totalExpense: r.total_expense ?? null, plan: r.plan ?? null,
+    splitAmount: splitAmount(r.total_expense, payers),
+  };
+}
+
+function toExpense(r: Row): Expense {
+  return {
+    id: r.id, roomId: r.room_id ?? "", title: r.title, purpose: r.purpose, totalAmount: r.total_amount, splitAmount: r.split_amount,
+    upi: r.upi_account_id ? { id: r.upi_account_id, upiId: r.upi_id, payeeName: r.payee_name, qrImageUrl: r.qr_image_url } : null,
+    dueDate: r.due_date, status: r.status, createdById: r.created_by, createdByName: r.created_by_name,
+    paidCount: r.paid_count, eligibleCount: r.eligible_count, collected: r.collected, myPaidAt: r.my_paid_at, myAmount: r.my_amount,
+  };
+}
+
+function toPayer(r: Row): Payer {
+  return {
+    userId: r.user_id, fullName: r.full_name, username: r.username, upiId: r.upi_id ?? null, amount: r.amount,
+    paidAt: r.marked_paid_at ?? r.paid_at ?? null, recordedBy: r.recorded_by ?? null,
   };
 }
 
@@ -171,7 +201,7 @@ export const supabaseApi: DataApi = {
       sb().from("memberships").select("role, status").eq("room_id", roomId).eq("user_id", me).maybeSingle(),
     ]);
     if (!r || !m) return null;
-    const admin = m.status === "approved" && m.role !== "member";
+    const admin = m.status === "approved" && isAdminRole(m.role);
     return {
       id: r.id, name: r.name, code: admin ? r.code : null, amountMode: r.amount_mode, amount: r.amount,
       payersPerUpi: r.payers_per_upi, remindWeekBefore: r.remind_week_before, remindDayBefore: r.remind_day_before,
@@ -358,6 +388,7 @@ export const supabaseApi: DataApi = {
       celebrationId: r.celebration_id, roomId: r.room_id, birthdayName: r.birthday_name, date: r.celebration_date,
       upi: r.upi_account_id ? { id: r.upi_account_id, upiId: r.upi_id, payeeName: r.payee_name, qrImageUrl: r.qr_image_url } : null,
       amountMode: r.amount_mode, amount: r.amount, allUpiFull: r.all_upi_full, myPaidAt: r.my_paid_at, myAmount: r.my_amount,
+      purpose: r.purpose ?? null, plan: r.plan ?? null, totalExpense: r.total_expense ?? null, splitAmount: r.split_amount ?? null,
     };
   },
 
@@ -376,13 +407,155 @@ export const supabaseApi: DataApi = {
   async getPayers(id): Promise<Payer[]> {
     const { data, error } = await sb().rpc("celebration_payers", { p_celebration: id });
     if (error) fail(error);
-    return (data as Row[]).map((r) => ({ userId: r.user_id, fullName: r.full_name, username: r.username, upiId: r.upi_id, amount: r.amount, paidAt: r.marked_paid_at }));
+    return (data as Row[]).map(toPayer);
   },
 
   onPoolChange(_id, cb) {
     // Other people's contributions are hidden by RLS, so poll the pool RPC.
     const timer = setInterval(cb, 10_000);
     return () => clearInterval(timer);
+  },
+
+  async setCelebrationDetails(celebrationId, input) {
+    const { error } = await sb().rpc("set_celebration_details", {
+      p_celebration: celebrationId, p_purpose: input.purpose ?? "", p_total: input.totalExpense, p_plan: input.plan ?? "",
+    });
+    if (error) fail(error);
+  },
+
+  async recordCelebrationPayment(celebrationId, userId, paid, amount) {
+    const { error } = await sb().rpc("record_celebration_payment", { p_celebration: celebrationId, p_user: userId, p_paid: paid, p_amount: amount ?? null });
+    if (error) fail(error);
+  },
+
+  async getPoll(celebrationId) {
+    const { data, error } = await sb().rpc("poll_view", { p_celebration: celebrationId });
+    if (error) fail(error);
+    const rows = data as Row[];
+    if (rows.length === 0) return null;
+    const first = rows[0]!;
+    const options = rows.map((r) => ({ id: r.option_id as string, label: r.label as string, price: r.price as number | null, votes: r.votes as number }));
+    return {
+      id: first.poll_id, roomId: "", celebrationId, question: first.question, status: first.status,
+      winnerOptionId: first.winner_option_id, options, myVote: first.my_vote, totalVotes: options.reduce((n, o) => n + o.votes, 0),
+    };
+  },
+
+  async createPoll(celebrationId, question, options) {
+    const { error } = await sb().rpc("create_poll", {
+      p_celebration: celebrationId, p_question: question, p_options: options.map((o) => ({ label: o.label, price: o.price ?? "" })),
+    });
+    if (error) fail(error);
+  },
+
+  async votePoll(pollId, optionId) {
+    const { error } = await sb().rpc("vote_poll", { p_poll: pollId, p_option: optionId });
+    if (error) fail(error);
+  },
+
+  async closePoll(pollId) {
+    const { error } = await sb().rpc("close_poll", { p_poll: pollId });
+    if (error) fail(error);
+  },
+
+  async deletePoll(pollId) {
+    const { error } = await sb().rpc("delete_poll", { p_poll: pollId });
+    if (error) fail(error);
+  },
+
+  async listExpenses(roomId) {
+    const { data, error } = await sb().rpc("room_expenses", { p_room: roomId });
+    if (error) fail(error);
+    return (data as Row[]).map((r) => toExpense({ ...r, room_id: roomId }));
+  },
+
+  async listUpiChoices(roomId) {
+    const { data, error } = await sb().rpc("room_upi_choices", { p_room: roomId });
+    if (error) fail(error);
+    return (data as Row[]).map((r) => ({ id: r.id, upiId: r.upi_id, payeeName: r.payee_name }));
+  },
+
+  async requestExpense(roomId, input) {
+    const { error } = await sb().rpc("request_expense", {
+      p_room: roomId, p_title: input.title, p_purpose: input.purpose ?? "", p_total: input.totalAmount,
+      p_upi: input.upiAccountId, p_due: input.dueDate,
+    });
+    if (error) fail(error);
+  },
+
+  async decideExpense(expenseId, approve) {
+    const { error } = await sb().rpc("decide_expense", { p_expense: expenseId, p_approve: approve });
+    if (error) fail(error);
+  },
+
+  async markExpensePaid(expenseId, paid, amount) {
+    const { error } = await sb().rpc("mark_expense_paid", { p_expense: expenseId, p_paid: paid, p_amount: amount ?? null });
+    if (error) fail(error);
+  },
+
+  async getExpensePayers(expenseId) {
+    const { data, error } = await sb().rpc("expense_payers", { p_expense: expenseId });
+    if (error) fail(error);
+    return (data as Row[]).map(toPayer);
+  },
+
+  async recordExpensePayment(expenseId, userId, paid, amount) {
+    const { error } = await sb().rpc("record_expense_payment", { p_expense: expenseId, p_user: userId, p_paid: paid, p_amount: amount ?? null });
+    if (error) fail(error);
+  },
+
+  async closeExpense(expenseId) {
+    const { error } = await sb().rpc("close_expense", { p_expense: expenseId });
+    if (error) fail(error);
+  },
+
+  async deleteExpense(expenseId) {
+    const { error } = await sb().rpc("delete_expense", { p_expense: expenseId });
+    if (error) fail(error);
+  },
+
+  async getWall(celebrationId) {
+    const me = await uid();
+    const { data: infoRows, error } = await sb().rpc("wall_info", { p_celebration: celebrationId });
+    if (error) {
+      if (error.message?.includes("not_found")) return null;
+      fail(error);
+    }
+    const i = (infoRows as Row[])[0];
+    if (!i) return null;
+    const { data: wishRows, error: wishError } = await sb().rpc("wall_wishes", { p_celebration: celebrationId });
+    if (wishError) fail(wishError);
+    return {
+      info: {
+        celebrationId: i.celebration_id, roomId: i.room_id, roomName: i.room_name, birthdayName: i.birthday_name, date: i.celebration_date,
+        revealed: i.revealed, isBirthdayPerson: i.is_birthday_person, plan: i.plan, wishCount: i.wish_count,
+      },
+      wishes: (wishRows as Row[]).map((w) => ({
+        id: w.id, celebrationId, authorId: w.author_id, authorName: w.author_name, message: w.message, isPrivate: w.is_private,
+        color: w.color, x: w.x, y: w.y, rotation: w.rotation, createdAt: w.created_at, mine: w.author_id === me,
+      })),
+    };
+  },
+
+  async addWish(celebrationId, input) {
+    const { error } = await sb().rpc("add_wish", { p_celebration: celebrationId, p_message: input.message, p_private: input.isPrivate, p_color: input.color });
+    if (error) fail(error);
+  },
+
+  async moveWish(wishId, x, y) {
+    const { error } = await sb().rpc("move_wish", { p_wish: wishId, p_x: x, p_y: y });
+    if (error) fail(error);
+  },
+
+  async deleteWish(wishId) {
+    const { error } = await sb().rpc("delete_wish", { p_wish: wishId });
+    if (error) fail(error);
+  },
+
+  async myBirthdayWalls() {
+    const { data, error } = await sb().rpc("my_birthday_walls");
+    if (error) fail(error);
+    return (data as Row[]).map((r) => ({ celebrationId: r.celebration_id, roomId: r.room_id, roomName: r.room_name, date: r.celebration_date, wishCount: r.wish_count }));
   },
 
   async listNotifications() {

@@ -5,14 +5,17 @@ import QRCode from "qrcode";
 import { useEffect, useRef, useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
 import { GiftArt } from "@/components/gift";
+import { PayersList } from "@/components/payers-list";
+import { PollCard } from "@/components/poll-card";
 import { ScratchCard } from "@/components/scratch-card";
-import { Avatar, BackLink, Columns, Countdown, EmptyState, ErrorNote, Loading, Page } from "@/components/ui";
+import { BackLink, Columns, Countdown, EmptyState, ErrorNote, Loading, Page } from "@/components/ui";
 import { data } from "@/lib/data";
 import { burstFrom, celebrate } from "@/lib/confetti";
 import { daysBetween, formatISODayMonth, relativeDays, todayIST } from "@/lib/dates";
+import { checkContribution } from "@/lib/split";
 import { buildUpiLink, formatRupees } from "@/lib/upi";
 import { useAsync } from "@/lib/use-async";
-import type { Celebration, Room, Session, Surprise } from "@/lib/types";
+import { isAdminRole, isRepRole, type Celebration, type Room, type Session, type Surprise } from "@/lib/types";
 
 export function SurpriseView() {
   return <AuthGate>{(s) => <SurpriseLoader session={s} />}</AuthGate>;
@@ -80,11 +83,12 @@ function SurpriseFlow({ room, celebration }: { room: Room; celebration: Celebrat
   const [amount, setAmount] = useState<number | null>(null);
 
   function receive(s: Surprise) {
-    setAmount(s.myAmount ?? (s.amountMode === "suggested" ? s.amount : null));
+    setAmount(s.myAmount ?? s.splitAmount ?? (s.amountMode === "suggested" ? s.amount : null));
     setSurprise(s);
   }
   const giftRef = useRef<HTMLButtonElement>(null);
-  const isAdmin = room.myRole !== "member";
+  const isAdmin = isAdminRole(room.myRole);
+  const isRep = isRepRole(room.myRole);
   const days = daysBetween(todayIST(), celebration.date);
 
   useEffect(() => {
@@ -133,6 +137,29 @@ function SurpriseFlow({ room, celebration }: { room: Room; celebration: Celebrat
               {formatISODayMonth(celebration.date)} · {relativeDays(days)}
             </p>
             {days > 0 && <Countdown date={celebration.date} />}
+            {(celebration.purpose || celebration.plan || celebration.splitAmount) && (
+              <section aria-label="The plan" className="card flex flex-col gap-1.5 text-sm">
+                {celebration.purpose && (
+                  <p>
+                    <span className="label inline">What for · </span>
+                    <b className="text-plum">{celebration.purpose}</b>
+                  </p>
+                )}
+                {celebration.totalExpense && celebration.splitAmount && (
+                  <p>
+                    <span className="label inline">Total · </span>
+                    <b className="text-plum">{formatRupees(celebration.totalExpense)}</b>, split equally:{" "}
+                    <b className="text-plum">{formatRupees(celebration.splitAmount)} each</b>
+                  </p>
+                )}
+                {celebration.plan && (
+                  <p>
+                    <span className="label inline">The plan · </span>
+                    {celebration.plan}
+                  </p>
+                )}
+              </section>
+            )}
             <div className="flex flex-col gap-3 md:mx-auto md:w-full md:max-w-md lg:mx-0">
               {!surprise ? (
                 alreadyOpened && !error ? (
@@ -159,9 +186,17 @@ function SurpriseFlow({ room, celebration }: { room: Room; celebration: Celebrat
                 <Revealed surprise={surprise} firstName={first} amount={amount} onAmount={setAmount} />
               )}
             </div>
+            <PollCard celebrationId={celebration.id} canManage={isAdmin} />
+            <Link href={`/rooms/${room.id}/wall/${celebration.id}`} className="card flex items-center justify-between gap-3">
+              <span>
+                <b className="block text-plum">Write on {first}&apos;s birthday wall ✍️</b>
+                <span className="hint">Stick a note, or send a private message only {first} can read. Revealed on the day.</span>
+              </span>
+              <span aria-hidden="true" className="text-plum">→</span>
+            </Link>
           </>
         }
-        side={<PoolCard celebrationId={celebration.id} isAdmin={isAdmin} surprise={surprise} amount={amount} />}
+        side={<PoolCard celebrationId={celebration.id} isRep={isRep} surprise={surprise} amount={amount} />}
       />
     </Page>
   );
@@ -171,7 +206,9 @@ function Revealed({ surprise, firstName, amount, onAmount }: { surprise: Surpris
   const [qr, setQr] = useState<string | null>(null);
   const [scratched, setScratched] = useState(Boolean(surprise.myPaidAt));
 
-  const payAmount = surprise.amountMode === "fixed" ? surprise.amount : amount;
+  const split = surprise.splitAmount;
+  const payAmount = split != null ? amount ?? split : surprise.amountMode === "fixed" ? surprise.amount : amount;
+  const tooLow = split != null ? checkContribution(amount ?? split, split) : null;
   const link = surprise.upi ? buildUpiLink({ upiId: surprise.upi.upiId, payeeName: surprise.upi.payeeName, amount: payAmount, note: `${firstName} birthday` }) : null;
 
   useEffect(() => {
@@ -209,18 +246,26 @@ function Revealed({ surprise, firstName, amount, onAmount }: { surprise: Surpris
           )}
           <span className="font-mono text-[13px] text-plum">{surprise.upi.upiId}</span>
           <span className="hint -mt-1.5">Pay to {surprise.upi.payeeName}</span>
-          {surprise.amountMode !== "any" && surprise.amount != null && (
+          {split != null ? (
             <span className="font-display text-[26px] font-extrabold text-plum">
-              {formatRupees(surprise.amount)}
-              {surprise.amountMode === "suggested" && <small className="ml-1 font-sans text-xs font-medium text-muted">suggested</small>}
+              {formatRupees(split)}
+              <small className="ml-1 font-sans text-xs font-medium text-muted">your share</small>
             </span>
+          ) : (
+            surprise.amountMode !== "any" &&
+            surprise.amount != null && (
+              <span className="font-display text-[26px] font-extrabold text-plum">
+                {formatRupees(surprise.amount)}
+                {surprise.amountMode === "suggested" && <small className="ml-1 font-sans text-xs font-medium text-muted">suggested</small>}
+              </span>
+            )
           )}
         </div>
       </ScratchCard>
 
       {scratched && (
         <div className="pop-in flex flex-col gap-3">
-          {surprise.amountMode !== "fixed" && (
+          {(split != null || surprise.amountMode !== "fixed") && (
             <div>
               <label htmlFor="pay-amount" className="label">
                 Your amount (₹)
@@ -230,15 +275,21 @@ function Revealed({ surprise, firstName, amount, onAmount }: { surprise: Surpris
                 className="field"
                 type="number"
                 inputMode="numeric"
-                min={1}
+                min={split ?? 1}
                 max={100000}
                 value={amount ?? ""}
+                aria-invalid={tooLow ? true : undefined}
+                aria-describedby="pay-amount-hint"
                 placeholder={surprise.amountMode === "any" ? "Any amount" : undefined}
                 onChange={(e) => onAmount(e.target.value === "" ? null : Math.max(1, Math.round(Number(e.target.value))))}
               />
+              <p id="pay-amount-hint" className="hint mt-1">
+                {split != null ? `Suggested: ${formatRupees(split)} (your equal share). You can give more, not less.` : "Pay what you like."}
+              </p>
+              <ErrorNote>{tooLow}</ErrorNote>
             </div>
           )}
-          <a href={link ?? "#"} className="btn">
+          <a href={tooLow ? undefined : link ?? "#"} aria-disabled={tooLow ? true : undefined} className={`btn ${tooLow ? "pointer-events-none opacity-50" : ""}`}>
             {payAmount ? `Pay ${formatRupees(payAmount)} with a UPI app` : "Pay with a UPI app"}
           </a>
           <p className="hint -mt-1 text-center">Opens GPay, PhonePe, Paytm or your bank app. On a laptop, scan the QR instead.</p>
@@ -249,9 +300,9 @@ function Revealed({ surprise, firstName, amount, onAmount }: { surprise: Surpris
   );
 }
 
-function PoolCard({ celebrationId, isAdmin, surprise, amount }: { celebrationId: string; isAdmin: boolean; surprise: Surprise | null; amount: number | null }) {
+function PoolCard({ celebrationId, isRep, surprise, amount }: { celebrationId: string; isRep: boolean; surprise: Surprise | null; amount: number | null }) {
   const pool = useAsync(() => data.getPool(celebrationId), [celebrationId]);
-  const payers = useAsync(() => (isAdmin ? data.getPayers(celebrationId) : Promise.resolve([])), [celebrationId, isAdmin]);
+  const payers = useAsync(() => (isRep ? data.getPayers(celebrationId) : Promise.resolve([])), [celebrationId, isRep]);
   const [paidAt, setPaidAt] = useState<string | null>(surprise?.myPaidAt ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -274,10 +325,12 @@ function PoolCard({ celebrationId, isAdmin, surprise, amount }: { celebrationId:
 
   async function togglePaid(next: boolean) {
     if (!surprise) return;
+    const problem = next && surprise.splitAmount != null ? checkContribution(amount ?? surprise.splitAmount, surprise.splitAmount) : null;
+    if (problem) return setError(problem);
     setSaving(true);
     setError(null);
     try {
-      await data.markPaid(surprise.celebrationId, next, surprise.amountMode === "fixed" ? null : amount);
+      await data.markPaid(surprise.celebrationId, next, surprise.splitAmount != null ? amount ?? surprise.splitAmount : surprise.amountMode === "fixed" ? null : amount);
       setPaidAt(next ? new Date().toISOString() : null);
       if (next) celebrate();
       reloadPool();
@@ -324,27 +377,17 @@ function PoolCard({ celebrationId, isAdmin, surprise, amount }: { celebrationId:
         <ErrorNote>{error}</ErrorNote>
       </section>
 
-      {isAdmin && payers.data && payers.data.length > 0 && (
-        <section aria-labelledby="payers" className="card">
-          <div className="flex items-center justify-between">
-            <h2 id="payers" className="label">
-              Who paid
-            </h2>
-            <span className="pill">Moderators only</span>
-          </div>
-          <ul className="dashed-list mt-1">
-            {payers.data.map((x) => (
-              <li key={x.userId} className="grid grid-cols-[36px_1fr_auto] items-center gap-2.5 py-2.5">
-                <Avatar name={x.fullName} />
-                <div className="min-w-0 text-sm font-bold text-ink">
-                  <span className="block truncate">{x.fullName}</span>
-                  <small className="block truncate text-xs font-normal text-muted">{x.upiId ?? "Hasn't opened it yet"}</small>
-                </div>
-                <span className={`pill ${x.paidAt ? "pill-mint" : ""}`}>{x.paidAt ? `✓ ${x.amount ? formatRupees(x.amount) : "Paid"}` : "Not yet"}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {isRep && payers.data && payers.data.length > 0 && (
+        <PayersList
+          payers={payers.data}
+          split={surprise?.splitAmount ?? null}
+          title="Who paid (admins and class reps)"
+          onRecord={async (userId, paid) => {
+            await data.recordCelebrationPayment(celebrationId, userId, paid);
+            reloadPayers();
+            reloadPool();
+          }}
+        />
       )}
     </>
   );

@@ -75,9 +75,36 @@ Each room's moderator and co-moderators get a dashboard to run it:
 - **Birthday wish**: on the day, the birthday person gets a "Happy birthday" from the room (can be switched off).
 - **Edit and delete everything**: room settings, UPI IDs (add, edit, pause, delete), members (remove, co-moderator), the room code, and the room itself (moderator only, by typing its name).
 
+### Celebration plans, splits and votes
+
+- **What for, total and plan:** for each birthday, admins add what the money is for ("Cake 🎂 and a gift"), the total expense and the plan for the day ("Cake cutting at 4:30 PM in the CSE lab"), from **Dashboard → Birthdays → Plan, total & vote** (`/rooms/[id]/manage/celebrations/[celebrationId]`).
+- **Equal split with a floor:** the total is split equally between everyone except the birthday person, rounded up. Each member's share is suggested on the surprise page, and **nobody can chip in less than their share** (more is fine). The app and the database both enforce this.
+- **Cake vote:** admins add options with prices ("Chocolate truffle ₹1,050", "Red velvet ₹1,200"). Members vote and can change their vote. When an admin closes the vote, the winning option's price becomes the total and the split updates. Ties go to the cheaper option.
+
+### Class reps and class expenses
+
+- **Class rep role:** the moderator can make any member a *class rep* (Dashboard → Members → role picker). Reps aren't admins: they can't see undecided birthdays or change settings.
+- **Splits for anything:** reps start a split for any class expense (a trip, printouts, a farewell gift): title, details, total, due date and which UPI ID collects. Admins approve or decline it, and **the class only sees it once approved**. Splits that admins start themselves go out straight away.
+- **Pay your share:** members see approved splits under **Room → Expenses**, with a UPI QR and pay link for their equal share (never less) and an "I've paid" tick.
+- **Record payments:** reps and admins open "Record payments" to mark who paid, for example cash handed over. The list shows whether each payment was self-reported or recorded by a rep. Reps can also record payments for birthday collections.
+- Admins close a collection when it's done, or delete it. Reps can withdraw a request that hasn't been approved.
+
+### The birthday wall
+
+- **Paper notes on a wall:** classmates stick notes on the birthday person's wall (`/rooms/[id]/wall/[celebrationId]`), choosing a paper colour. Notes are taped on at a slight angle and can be **dragged** to a new spot, or moved with the arrow keys.
+- **Revealed on the day:** before the birthday, classmates can see and add to the public wall; the birthday person can't open it at all (the database refuses). On the day they get a "your wall is ready" banner and notification, and can arrange every note.
+- **Private messages:** tick "🔒 Private message" and only the birthday person can read the note. Other classmates never see it.
+- **One-tap Instagram card:** "📸 Share to Instagram" draws a 1080×1920 story card with two designs (Party night, Sunshine). It shows the name, room, note count, an editable line (prefilled with the plan) and up to three public notes; private notes are never included. On a phone, **Share** opens the share sheet, where Instagram appears; elsewhere it downloads the image.
+- Up to 5 notes per person per birthday. Authors can delete their notes, and admins can remove inappropriate ones.
+
+### Fun touches
+
+- **Poppable balloons** on the home page: glossy balloons with a shine, a knot and a curly string, swaying as they float. Tap one and it bursts with a pop sound and a puff of confetti, then a new one floats back up. Motion is reduced if the phone asks for it.
+
 ### Rules the app follows
 
 - Only the day and month of a birthday are shown to others, never the year.
+- The birth year must be before the current year (so 2026 sign-ups pick 2025 or earlier).
 - A date of birth is locked once saved. Nobody can change it from the app; the owner can fix a genuine mistake in the Supabase SQL editor.
 - 29 February birthdays are celebrated on 28 February in non-leap years.
 - All dates use India time (Asia/Kolkata), whatever the phone's time zone.
@@ -115,10 +142,11 @@ Without Supabase keys the app runs on **sample data**. Use the **Demo** button i
 |---|---|
 | **Member** (Kabir) | Open Riya's surprise, scratch the card, tick "I've chipped in" |
 | **Moderator** (Aarav) | Approve join requests, see who paid, edit the room |
-| **Birthday person** (Riya) | Her birthday is tomorrow: her room shows nothing about it |
+| **Birthday person** (Riya) | Her birthday is today: open the room for the "Your wall is ready" banner, drag notes, read the private ones, try the Instagram card |
+| **Class rep** (Ananya) | Room → Expenses: start a split (goes for approval), record who paid |
 | **New student** | Go to `/join`, enter code `CSEB26`, fill in the profile and send a request |
 
-**Two-tab demo:** open one tab as the new student waiting for approval and a second tab as the moderator. Click "Let in" in the moderator tab and the first tab moves into the room by itself. Each tab keeps its own demo user. "Reset data" in the demo menu brings back the sample data, which also refreshes every day so "birthday tomorrow" stays true.
+**Two-tab demo:** open one tab as the new student waiting for approval and a second tab as the moderator. Click "Let in" in the moderator tab and the first tab moves into the room by itself. Each tab keeps its own demo user. "Reset data" in the demo menu brings back the sample data, which also refreshes every day so "birthday today" stays true.
 
 ## Project structure
 
@@ -198,10 +226,13 @@ bdap/
 | `contributions` | Which UPI ID each payer was given, and whether they ticked "paid" |
 | `notifications` | The in-app feed; one reminder per person, celebration and kind |
 | `push_subscriptions` | Each device's Web Push endpoint |
+| `polls`, `poll_options`, `poll_votes` | Votes such as the cake flavour; closing sets the celebration's total |
+| `expenses`, `expense_payments` | Class expense splits (requested by reps, approved by admins) and who paid |
+| `wishes` | Notes on a birthday wall: message, colour, position, and whether it's private |
 
 Room codes use `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, so there's no O/0 or I/1 mix-up.
 
-**Main functions (RPCs):** `username_available`, `preview_room`, `request_join`, `create_room`, `regenerate_room_code`, `decide_request`, `set_member_role`, `remove_member`, `room_members`, `ensure_room_celebrations`, `open_surprise`, `mark_paid`, `celebration_pool`, `celebration_payers`, `set_celebration_decision`, `delete_room`, and `prepare_due_reminders` (server only).
+**Main functions (RPCs):** `username_available`, `preview_room`, `request_join`, `create_room`, `regenerate_room_code`, `decide_request`, `set_member_role`, `remove_member`, `room_members`, `ensure_room_celebrations`, `open_surprise`, `mark_paid`, `celebration_pool`, `celebration_payers`, `set_celebration_decision`, `delete_room`, `set_celebration_details`, `record_celebration_payment`, `create_poll`, `poll_view`, `vote_poll`, `close_poll`, `request_expense`, `decide_expense`, `room_expenses`, `mark_expense_paid`, `expense_payers`, `record_expense_payment`, `room_upi_choices`, `add_wish`, `wall_info`, `wall_wishes`, `move_wish`, `delete_wish`, `my_birthday_walls`, and `prepare_due_reminders` (server only).
 
 ## How the secret is kept
 
@@ -246,12 +277,33 @@ Each run also creates celebrations for the next 30 days (as Celebrate if the roo
 
 **iPhone:** push works only after **Share → Add to Home Screen**, on iOS 16.4 or newer. The app shows these steps.
 
+### Priority notifications
+
+Birthday reminders (a week before, the day before, on the day), the birthday wish, "your wall is ready" and new approved splits are **priority** notifications.
+
+**What the app does now (web / PWA):**
+
+| Layer | What happens |
+|---|---|
+| Push service | Sent with `Urgency: high`, so Android and Chrome deliver them straight away instead of batching them while the phone sleeps. Other notifications use normal urgency. |
+| On the phone | The service worker shows them with `requireInteraction` (they stay until dismissed), a vibration pattern, a 🎂 in the title, an Open button, and `renotify` so a repeat still alerts. |
+| In the app | Unread priority notifications are pinned at the top of the bell, tinted pink with a "Priority" tag. |
+| Database | `notifications.priority` is set by the reminder job, so every device and the in-app feed agree. |
+
+**Plan for "real" OS priority** (Android channels, iOS Time Sensitive). A web app can't set these; they need a thin native wrapper:
+
+1. **Android:** wrap the PWA as a Trusted Web Activity (Bubblewrap) or with Capacitor, and add Firebase Cloud Messaging. Create a "Birthday reminders" notification channel with `IMPORTANCE_HIGH` (heads-up banner, sound) and send priority reminders as FCM `priority: high` messages on that channel. Users can then fine-tune the channel in Android settings.
+2. **iOS:** a Capacitor build with the Time Sensitive Notifications entitlement, sending APNs pushes with `interruption-level: time-sensitive` so reminders break through Focus modes.
+3. **Server:** keep the same `prepare_due_reminders()` job. Add a `device_tokens` table next to `push_subscriptions`, and in the cron route send each notification to Web Push subscribers (as now) and to FCM/APNs tokens with the priority flag.
+4. **In-app safety net:** if a priority reminder is still unread 2 hours before the event, send one gentle follow-up (idempotent, one per person and birthday).
+
+
 ## Going live
 
 ### 1. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In the **SQL editor**, run the seven files in `supabase/migrations/` in name order: `…_init.sql`, `…_hardening.sql`, `…_grants.sql`, `…_fix_upi_regex.sql`, `…_notification_kinds.sql`, `…_admin_controls.sql`, then `…_lock_dob.sql` (or use `supabase db push` with the Supabase CLI). This creates the tables, security rules and functions, turns on Realtime, and creates the `upi-qr` storage bucket.
+2. In the **SQL editor**, run the nine files in `supabase/migrations/` in name order: `…_init.sql`, `…_hardening.sql`, `…_grants.sql`, `…_fix_upi_regex.sql`, `…_notification_kinds.sql`, `…_admin_controls.sql`, `…_lock_dob.sql`, `…_more_enum_values.sql`, then `…_expenses_polls_wall.sql` (or use `supabase db push` with the Supabase CLI). This creates the tables, security rules and functions, turns on Realtime, and creates the `upi-qr` storage bucket.
 3. **Authentication → Providers → Google:** turn it on and paste a Google OAuth client ID and secret (from Google Cloud Console → APIs & Services → Credentials). In Google Cloud, add Supabase's callback URL (shown on that Supabase screen) as an authorised redirect URI.
 4. **Authentication → URL configuration:** set the Site URL to your domain, and add these redirect URLs:
    - `https://<your-domain>/auth/callback`
@@ -335,6 +387,7 @@ Unit tests cover the logic that must never be wrong:
 - `src/lib/dates.test.ts`: India time, next birthday, the 29 Feb rule, countdowns, and that no year is ever shown.
 - `src/lib/safe-next.test.ts`: post-login redirects can't leave the site.
 - `src/lib/reminders.test.ts`: nothing goes to members before approval, custom times, wish-only days, the birthday wish, and when admins are asked.
+- `src/lib/split.test.ts`: equal split rounding, the "never less than your share" rule, the vote winner and tie-break, priority kinds, and the birth-year rule.
 
 The flows themselves are easiest to check in mock mode with the demo users (see [Quick start](#quick-start-no-backend-needed)).
 
@@ -360,10 +413,8 @@ Ownership rules, Next.js 16 notes and security rules are in [CONTRIBUTING.md](CO
 
 Ideas for after launch (the owner picks):
 
-- A secret wish wall that is revealed at midnight
-- A gift poll
-- A reveal page for the birthday person on the day
-- Photo memories
+- Photo memories on the birthday wall
+- Native app wrapper for OS-level priority notifications (see [Priority notifications](#priority-notifications))
 - WhatsApp share of the room code (sharing already falls back to WhatsApp when the phone has no share sheet)
 - Custom room themes
 

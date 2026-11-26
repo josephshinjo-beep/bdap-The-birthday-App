@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useId, useState } from "react";
 import { data } from "@/lib/data";
-import { todayIST } from "@/lib/dates";
+import { dobAllowed, maxDob, todayIST } from "@/lib/dates";
 import { DataError, type ProfileInput } from "@/lib/types";
 import { ErrorNote } from "./ui";
 
@@ -62,7 +62,9 @@ export function ProfileForm({
   }, [name, needsCheck]);
 
   const today = todayIST();
-  const dobValid = Boolean(dob) && dob < today && dob > "1900-01-01";
+  // Birth year has to be before the current year (and locked once saved).
+  const dobValid = lockDob ? Boolean(dob) : dobAllowed(dob, today);
+  const dobError = !lockDob && dob && !dobAllowed(dob, today) ? `Pick a date in ${Number(today.slice(0, 4)) - 1} or earlier.` : null;
   const canSubmit = fullName.trim().length > 0 && availability === "free" && dobValid && !saving;
 
   async function submit(e: React.FormEvent) {
@@ -143,7 +145,8 @@ export function ProfileForm({
           </>
         ) : (
           <>
-            <input id={ids.dob} type="date" className="field" value={dob} max={today} min="1900-01-02" aria-describedby={ids.dobHint} onChange={(e) => setDob(e.target.value)} />
+            <input id={ids.dob} type="date" className="field" value={dob} max={maxDob(today)} min="1900-01-01" aria-describedby={ids.dobHint} aria-invalid={dobError ? true : undefined} onChange={(e) => setDob(e.target.value)} />
+            <ErrorNote>{dobError}</ErrorNote>
             <p id={ids.dobHint} className="hint mt-1">Classmates only see the day and month, never the year. <b className="text-plum">Check it carefully: you can&apos;t change it later.</b></p>
           </>
         )}

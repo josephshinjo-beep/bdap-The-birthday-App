@@ -31,7 +31,7 @@ async function run(request: NextRequest) {
     console.error("prepare_due_reminders failed", error.message);
     return NextResponse.json({ error: "prepare_due_reminders failed" }, { status: 500 });
   }
-  const created = (data ?? []) as { notification_id: string; user_id: string; title: string; body: string; url: string }[];
+  const created = (data ?? []) as { notification_id: string; user_id: string; title: string; body: string; url: string; priority: boolean }[];
 
   let push = { sent: 0, failed: 0, gone: 0 };
   if (created.length > 0) {
@@ -43,7 +43,7 @@ async function run(request: NextRequest) {
     }
 
     const items = created.flatMap((n) =>
-      (subsByUser.get(n.user_id) ?? []).map((sub) => ({ sub, payload: { title: n.title, body: n.body, url: n.url, tag: n.notification_id } })),
+      (subsByUser.get(n.user_id) ?? []).map((sub) => ({ sub, payload: { title: n.title, body: n.body, url: n.url, tag: n.notification_id, priority: n.priority } })),
     );
     const result = await sendPushes(items);
     push = { sent: result.sent, failed: result.failed, gone: result.gone.length };

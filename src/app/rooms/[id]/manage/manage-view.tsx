@@ -4,13 +4,14 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
 import { CodeTicket } from "@/components/code-ticket";
+import { ExpensesPanel } from "@/components/expenses-panel";
 import { Avatar, BackLink, Columns, DateBlock, EmptyState, ErrorNote, Loading, Page, TabPanel, Tabs, roleLabel } from "@/components/ui";
 import { data } from "@/lib/data";
 import { daysBetween, formatDayMonth, formatTime, parseISODate, relativeDays, todayIST } from "@/lib/dates";
 import { onMockChange } from "@/lib/data/mock";
 import { dataMode } from "@/lib/data";
 import { useAsync } from "@/lib/use-async";
-import type { Celebration, CelebrationDecision, Member, Room, Session } from "@/lib/types";
+import { isAdminRole, type Celebration, type CelebrationDecision, type Member, type Room, type Session } from "@/lib/types";
 
 export function ManageView() {
   return <AuthGate>{(s) => <ManageLoader session={s} />}</AuthGate>;
@@ -25,7 +26,7 @@ function ManageLoader({ session }: { session: Session }) {
         <Loading />
       </Page>
     );
-  if (!room.data || room.data.myStatus !== "approved" || room.data.myRole === "member") {
+  if (!room.data || room.data.myStatus !== "approved" || !isAdminRole(room.data.myRole)) {
     return (
       <Page>
         <EmptyState
@@ -44,8 +45,8 @@ function ManageLoader({ session }: { session: Session }) {
   return <Manage room={room.data} session={session} />;
 }
 
-type AdminTab = "overview" | "birthdays" | "members" | "settings";
-const TABS: AdminTab[] = ["overview", "birthdays", "members", "settings"];
+type AdminTab = "overview" | "birthdays" | "expenses" | "members" | "settings";
+const TABS: AdminTab[] = ["overview", "birthdays", "expenses", "members", "settings"];
 
 function Manage({ room, session }: { room: Room; session: Session }) {
   const params = useSearchParams();
@@ -54,6 +55,7 @@ function Manage({ room, session }: { room: Room; session: Session }) {
   const [tab, setTabState] = useState<AdminTab>(initial && TABS.includes(initial) ? initial : "overview");
   const members = useAsync(() => data.listMembers(room.id), [room.id]);
   const birthdays = useAsync(() => data.adminCelebrations(room.id), [room.id]);
+  const expenses = useAsync(() => data.listExpenses(room.id), [room.id, tab]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
@@ -104,6 +106,7 @@ function Manage({ room, session }: { room: Room; session: Session }) {
   const approved = (members.data ?? []).filter((m) => m.status === "approved");
   const cels = birthdays.data ?? [];
   const undecided = cels.filter((c) => c.decision === "pending");
+  const splitRequests = (expenses.data ?? []).filter((e) => e.status === "requested");
 
   return (
     <Page size="wide">
@@ -130,6 +133,7 @@ function Manage({ room, session }: { room: Room; session: Session }) {
           tabs={[
             { id: "overview", label: "Overview" },
             { id: "birthdays", label: undecided.length ? `Birthdays (${undecided.length})` : "Birthdays" },
+            { id: "expenses", label: splitRequests.length ? `Expenses (${splitRequests.length})` : "Expenses" },
             { id: "members", label: pending.length ? `Members (${pending.length})` : "Members" },
             { id: "settings", label: "Settings" },
           ]}
@@ -161,6 +165,15 @@ function Manage({ room, session }: { room: Room; session: Session }) {
                     </span>
                   </button>
                 )}
+                {splitRequests.length > 0 && (
+                  <button type="button" onClick={() => setTab("expenses")} className="card card-danger flex w-full items-center justify-between gap-3 text-left">
+                    <span>
+                      <b className="block text-plum">{splitRequests.length === 1 ? `Split request: ${splitRequests[0]!.title}` : `${splitRequests.length} split requests from class reps`}</b>
+                      <span className="hint">Approve them before the class sees them.</span>
+                    </span>
+                    <span aria-hidden="true" className="text-plum">→</span>
+                  </button>
+                )}
                 <JoinRequests room={room} pending={pending} loading={members.loading} busy={busy} act={act} />
               </>
             }
@@ -183,6 +196,12 @@ function Manage({ room, session }: { room: Room; session: Session }) {
       {tab === "birthdays" && (
         <TabPanel id="birthdays">
           <BirthdaysTab room={room} cels={cels} loading={birthdays.loading} busy={busy} act={act} reload={reloadBirthdays} />
+        </TabPanel>
+      )}
+
+      {tab === "expenses" && (
+        <TabPanel id="expenses">
+          {members.loading ? <Loading /> : <ExpensesPanel room={room} memberCount={approved.length} />}
         </TabPanel>
       )}
 
@@ -419,11 +438,9 @@ function BirthdaysTab({ room, cels, loading, busy, act, reload }: { room: Room; 
                         Undo decision
                       </button>
                     )}
-                    {c.decision === "celebrate" && (
-                      <Link href={`/rooms/${room.id}/surprise/${c.id}`} className="btn-secondary btn-sm">
-                        Pool and who paid →
-                      </Link>
-                    )}
+                    <Link href={`/rooms/${room.id}/manage/celebrations/${c.id}`} className="btn-secondary btn-sm">
+                      Plan, total &amp; vote →
+                    </Link>
                   </div>
                 </li>
               );
@@ -465,11 +482,11 @@ function MemberRow({
   me: string;
   isModerator: boolean;
   busy: boolean;
-  onRole: (r: "co_moderator" | "member") => void;
+  onRole: (r: "co_moderator" | "class_rep" | "member") => void;
   onRemove: () => void;
 }) {
   const [confirm, setConfirm] = useState(false);
-  const canRemove = m.userId !== me && m.role !== "moderator" && (m.role === "member" || isModerator);
+  const canRemove = m.userId !== me && m.role !== "moderator" && (m.role === "member" || m.role === "class_rep" || isModerator);
   const canRole = isModerator && m.userId !== me && m.role !== "moderator";
 
   return (
@@ -487,15 +504,20 @@ function MemberRow({
         </div>
         <div className="flex gap-1">
           {canRole && (
-            <button
-              type="button"
-              className="btn-secondary btn-sm"
-              disabled={busy}
-              aria-label={m.role === "co_moderator" ? `Make ${m.fullName} a member` : `Make ${m.fullName} co-moderator`}
-              onClick={() => onRole(m.role === "co_moderator" ? "member" : "co_moderator")}
-            >
-              {m.role === "co_moderator" ? "Make member" : "Co-mod"}
-            </button>
+            <>
+              <label htmlFor={`role-${m.userId}`} className="sr-only">Role for {m.fullName}</label>
+              <select
+                id={`role-${m.userId}`}
+                className="field !min-h-10 !w-auto !py-1.5 !pl-2 !pr-7 text-[13px] font-bold text-plum"
+                value={m.role}
+                disabled={busy}
+                onChange={(e) => onRole(e.target.value as "co_moderator" | "class_rep" | "member")}
+              >
+                <option value="member">Member</option>
+                <option value="class_rep">Class rep</option>
+                <option value="co_moderator">Co-mod</option>
+              </select>
+            </>
           )}
           {canRemove && !confirm && (
             <button type="button" className="btn-secondary btn-sm" onClick={() => setConfirm(true)} aria-label={`Remove ${m.fullName}`}>

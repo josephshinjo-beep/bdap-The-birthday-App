@@ -45,6 +45,8 @@ export interface PushPayload {
   body: string;
   url: string;
   tag?: string;
+  /** Birthday reminders: high urgency, stays on screen, vibrates. */
+  priority?: boolean;
 }
 
 export interface PushResult {
@@ -66,7 +68,8 @@ export async function sendPushes(items: { sub: StoredSubscription; payload: Push
         await webpush.sendNotification(
           { endpoint: item.sub.endpoint, keys: { p256dh: item.sub.p256dh, auth: item.sub.auth } },
           JSON.stringify(item.payload),
-          { TTL: 60 * 60 * 12, urgency: "high", timeout: 10_000 },
+          // Priority pushes are delivered right away even to sleeping phones; others may be batched.
+          { TTL: 60 * 60 * 12, urgency: item.payload.priority ? "high" : "normal", timeout: 10_000 },
         );
         result.sent++;
       } catch (err) {

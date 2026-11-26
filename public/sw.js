@@ -10,12 +10,21 @@ self.addEventListener("push", (event) => {
     data = { title: "bdap", body: event.data ? event.data.text() : "" };
   }
   const title = data.title || "bdap";
+  const priority = Boolean(data.priority);
+  // Priority (birthday reminders): stays on screen until dismissed, vibrates,
+  // and re-alerts if an older one with the same tag is still showing.
   event.waitUntil(
-    self.registration.showNotification(title, {
+    self.registration.showNotification(priority ? "🎂 " + title : title, {
       body: data.body || "",
       icon: "/icons/192",
       badge: "/icons/192",
       tag: data.tag || undefined,
+      renotify: priority && Boolean(data.tag),
+      requireInteraction: priority,
+      silent: false,
+      vibrate: priority ? [220, 90, 220, 90, 420] : [120],
+      timestamp: Date.now(),
+      actions: priority && data.url ? [{ action: "open", title: "Open" }] : [],
       data: { url: data.url || "/rooms" },
     }),
   );

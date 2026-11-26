@@ -405,6 +405,55 @@
   background: rgba(255, 255, 255, 0.5);
 }
 
+/* Poppable balloons: sway and drift up, then pop. */
+@keyframes balloon-sway {
+  0%,
+  100% {
+    transform: translateY(18%) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-22%) rotate(4deg);
+  }
+}
+@keyframes balloon-burst {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(1.35);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+}
+@keyframes balloon-arrive {
+  from {
+    transform: translateY(60%);
+    opacity: 0;
+  }
+}
+.balloon-btn {
+  animation: balloon-sway 6s ease-in-out infinite;
+  transform-origin: 50% 100%;
+  cursor: pointer;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.18));
+}
+.balloon-btn:focus-visible {
+  outline: 3px solid var(--sky);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+.balloon-pop {
+  animation: balloon-burst 260ms ease-out forwards;
+  transform-origin: 50% 27%;
+}
+.balloon-in {
+  animation: balloon-arrive 600ms var(--ease-pop) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

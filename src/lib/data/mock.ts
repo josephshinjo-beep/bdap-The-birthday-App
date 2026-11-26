@@ -4,14 +4,20 @@
 // (open two tabs as different demo users to see "realtime" approvals).
 // Switch users with the demo switcher (bottom of every page in mock mode).
 
-import { addDays, nextBirthday, parseISODate, timeIST, todayIST } from "@/lib/dates";
+import { addDays, birthdayInYear, daysBetween, formatISODayMonth, nextBirthday, parseISODate, timeIST, todayIST } from "@/lib/dates";
+import { checkContribution, isPriority, pickWinner, splitAmount } from "@/lib/split";
 import { DECISION_WINDOW_DAYS, dueReminders, reminderText } from "@/lib/reminders";
 import { pickUpiAccount } from "@/lib/upi";
 import {
   DataError,
+  isAdminRole,
   type AppNotification,
   type Celebration,
   type CelebrationDecision,
+  type Expense,
+  type ExpenseStatus,
+  type Poll,
+  type WishColor,
   type CreateRoomInput,
   type Member,
   type MemberStatus,
@@ -29,7 +35,7 @@ import {
 } from "@/lib/types";
 import type { DataApi, Unsubscribe } from "./api";
 
-const STORE_KEY = "bdap-mock-v2";
+const STORE_KEY = "bdap-mock-v3";
 const USER_KEY = "bdap-mock-user";
 const EVENT = "bdap-mock-change";
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -40,7 +46,8 @@ const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 export const DEMO_USERS = [
   { id: "u-kabir", label: "Member", hint: "Kabir · sees the surprise" },
   { id: "u-aarav", label: "Moderator", hint: "Aarav · runs CSE B" },
-  { id: "u-riya", label: "Birthday person", hint: "Riya · birthday tomorrow" },
+  { id: "u-riya", label: "Birthday person", hint: "Riya · birthday today (sees her wall)" },
+  { id: "u-f0", label: "Class rep", hint: "Ananya · requests splits, records payments" },
   { id: "u-new", label: "New student", hint: "No profile yet" },
 ] as const;
 export type DemoUserId = (typeof DEMO_USERS)[number]["id"];
@@ -78,6 +85,41 @@ interface StoredContribution {
   upiAccountId: string | null;
   amount: number | null;
   paidAt: string | null;
+  recordedBy?: string | null;
+}
+interface StoredPoll {
+  id: string;
+  roomId: string;
+  celebrationId: string | null;
+  question: string;
+  status: "open" | "closed";
+  winnerOptionId: string | null;
+  options: { id: string; label: string; price: number | null; sortOrder: number }[];
+}
+interface StoredExpense {
+  id: string;
+  roomId: string;
+  title: string;
+  purpose: string | null;
+  totalAmount: number;
+  splitAmount: number | null;
+  upiAccountId: string | null;
+  dueDate: string | null;
+  status: ExpenseStatus;
+  createdBy: string | null;
+  createdAt: string;
+}
+interface StoredWish {
+  id: string;
+  celebrationId: string;
+  authorId: string;
+  message: string;
+  isPrivate: boolean;
+  color: WishColor;
+  x: number;
+  y: number;
+  rotation: number;
+  createdAt: string;
 }
 interface StoredNotification extends AppNotification {
   userId: string;
@@ -93,6 +135,12 @@ interface Store {
   notifications: StoredNotification[];
   /** Admin decisions per celebration id. Missing = the room's default. */
   decisions: Record<string, CelebrationDecision>;
+  celDetails: Record<string, { purpose: string | null; totalExpense: number | null; plan: string | null }>;
+  polls: StoredPoll[];
+  pollVotes: { pollId: string; userId: string; optionId: string }[];
+  expenses: StoredExpense[];
+  expensePayments: { expenseId: string; userId: string; amount: number | null; paidAt: string | null; recordedBy: string | null }[];
+  wishes: StoredWish[];
 }
 
 // ---------------------------------------------------------------------------
@@ -119,7 +167,7 @@ function seed(): Store {
   const profiles: Profile[] = [
     { id: "u-aarav", fullName: "Aarav Sharma", username: "aarav.s", dob: "2005-03-14", avatarUrl: null },
     { id: "u-kabir", fullName: "Kabir Mehta", username: "kabir.m", dob: "2005-07-02", avatarUrl: null },
-    { id: "u-riya", fullName: "Riya Kapoor", username: "riya.k", dob: dobFromDate(addDays(today, 1)), avatarUrl: null },
+    { id: "u-riya", fullName: "Riya Kapoor", username: "riya.k", dob: dobFromDate(today), avatarUrl: null },
     { id: "u-meera", fullName: "Meera Nair", username: "meera.n", dob: dobFromDate(addDays(today, 5), 2004), avatarUrl: null },
     { id: "u-isha", fullName: "Isha Verma", username: "isha.v", dob: "2005-09-21", avatarUrl: null },
   ];
@@ -149,7 +197,8 @@ function seed(): Store {
     { roomId: "r-cseb", userId: "u-kabir", role: "member", status: "approved", requestedAt: now },
     { roomId: "r-cseb", userId: "u-riya", role: "member", status: "approved", requestedAt: now },
     { roomId: "r-cseb", userId: "u-isha", role: "member", status: "pending", requestedAt: now },
-    ...FILLER.map((_, i) => ({ roomId: "r-cseb", userId: `u-f${i}`, role: "member" as Role, status: "approved" as MemberStatus, requestedAt: now })),
+    // Ananya (u-f0) is the class rep.
+    ...FILLER.map((_, i) => ({ roomId: "r-cseb", userId: `u-f${i}`, role: (i === 0 ? "class_rep" : "member") as Role, status: "approved" as MemberStatus, requestedAt: now })),
     { roomId: "r-hostel", userId: "u-meera", role: "moderator", status: "approved", requestedAt: now },
     { roomId: "r-hostel", userId: "u-riya", role: "member", status: "approved", requestedAt: now },
     { roomId: "r-hostel", userId: "u-f2", role: "member", status: "approved", requestedAt: now },
@@ -161,8 +210,8 @@ function seed(): Store {
     { id: "upi-3", roomId: "r-hostel", upiId: "meera.nair@ybl", payeeName: "Meera Nair", ownerUserId: "u-meera", qrImageUrl: null, sortOrder: 0, active: true },
   ];
 
-  // Riya's celebration already has 12 payers on the first UPI ID, 9 of them paid.
-  const riyaCel = celebrationId("r-cseb", "u-riya", addDays(today, 1));
+  // Riya's birthday is today: 12 payers on the first UPI ID, 9 of them paid.
+  const riyaCel = celebrationId("r-cseb", "u-riya", today);
   const contributions: StoredContribution[] = FILLER.slice(0, 12).map((_, i) => ({
     celebrationId: riyaCel,
     userId: `u-f${i}`,
@@ -182,6 +231,43 @@ function seed(): Store {
     notifications: [],
     // CSE B: Riya's birthday is approved; Meera's waits for an admin decision.
     decisions: { [riyaCel]: "celebrate" },
+    celDetails: {
+      [riyaCel]: { purpose: "Cake 🎂 and a gift", totalExpense: 1050, plan: "Cake cutting at 4:30 PM in the CSE lab. Wear something pink!" },
+    },
+    polls: [
+      {
+        id: "poll-riya", roomId: "r-cseb", celebrationId: riyaCel, question: "Which cake for Riya?", status: "open", winnerOptionId: null,
+        options: [
+          { id: "opt-choc", label: "Chocolate truffle", price: 1050, sortOrder: 0 },
+          { id: "opt-rv", label: "Red velvet", price: 1200, sortOrder: 1 },
+          { id: "opt-bf", label: "Black forest", price: 900, sortOrder: 2 },
+        ],
+      },
+    ],
+    pollVotes: FILLER.slice(0, 11).map((_, i) => ({ pollId: "poll-riya", userId: `u-f${i}`, optionId: i % 3 === 0 ? "opt-rv" : i % 3 === 1 ? "opt-choc" : "opt-bf" })),
+    expenses: [
+      {
+        id: "exp-bus", roomId: "r-cseb", title: "Industrial visit bus", purpose: "Bus to the Technopark visit on Friday", totalAmount: 6600,
+        splitAmount: 300, upiAccountId: "upi-1", dueDate: addDays(today, 6), status: "approved", createdBy: "u-f0", createdAt: now,
+      },
+      {
+        id: "exp-print", roomId: "r-cseb", title: "Lab record printouts", purpose: "Printing and binding for 22 records", totalAmount: 1100,
+        splitAmount: null, upiAccountId: "upi-2", dueDate: addDays(today, 10), status: "requested", createdBy: "u-f0", createdAt: now,
+      },
+    ],
+    expensePayments: FILLER.slice(0, 8).map((_, i) => ({ expenseId: "exp-bus", userId: `u-f${i}`, amount: 300, paidAt: now, recordedBy: i % 3 === 0 ? "u-f0" : null })),
+    wishes: [
+      ["u-f1", "Happy birthday Riya! 🎉 Thanks for always sharing your notes before exams.", false, "sun", 6, 8, -4],
+      ["u-f2", "To the best lab partner ever. Have the best day!", false, "pink", 38, 12, 3],
+      ["u-kabir", "HBD! The cake is on its way, act surprised 🤫", false, "mint", 68, 6, -2],
+      ["u-f4", "Wishing you a year full of good grades and great food.", false, "sky", 12, 46, 5],
+      ["u-f5", "I never said it, but your project ideas inspire me. Happy birthday.", true, "white", 44, 48, -5],
+      ["u-aarav", "Happy birthday from your moderator! 🎂", false, "sun", 72, 44, 2],
+      ["u-meera", "See you at 4:30! 💖", true, "pink", 30, 74, -3],
+    ].map(([authorId, message, isPrivate, color, x, y, rotation], i) => ({
+      id: `wish-${i}`, celebrationId: riyaCel, authorId: authorId as string, message: message as string, isPrivate: isPrivate as boolean,
+      color: color as WishColor, x: x as number, y: y as number, rotation: rotation as number, createdAt: now,
+    })),
   };
 }
 
@@ -291,6 +377,63 @@ function isAdmin(store: Store, roomId: string, userId: string) {
   return m?.status === "approved" && (m.role === "moderator" || m.role === "co_moderator");
 }
 
+function isRep(store: Store, roomId: string, userId: string) {
+  const m = membership(store, roomId, userId);
+  return m?.status === "approved" && m.role !== "member";
+}
+
+function toPoll(store: Store, poll: StoredPoll, me: string): Poll {
+  const options = poll.options
+    .slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((o) => ({ id: o.id, label: o.label, price: o.price, votes: store.pollVotes.filter((v) => v.optionId === o.id).length }));
+  return {
+    id: poll.id, roomId: poll.roomId, celebrationId: poll.celebrationId, question: poll.question, status: poll.status,
+    winnerOptionId: poll.winnerOptionId, options, myVote: store.pollVotes.find((v) => v.pollId === poll.id && v.userId === me)?.optionId ?? null,
+    totalVotes: options.reduce((n, o) => n + o.votes, 0),
+  };
+}
+
+function memberCount(store: Store, roomId: string) {
+  return store.memberships.filter((m) => m.roomId === roomId && m.status === "approved").length;
+}
+
+function approveExpense(store: Store, e: StoredExpense) {
+  e.status = "approved";
+  e.splitAmount = splitAmount(e.totalAmount, memberCount(store, e.roomId));
+  for (const m of store.memberships) {
+    if (m.roomId !== e.roomId || m.status !== "approved") continue;
+    notify(store, m.userId, {
+      roomId: e.roomId, celebrationId: null, kind: "expense_approved", title: `New split: ${e.title}`,
+      body: `Your share is ₹${e.splitAmount}${e.dueDate ? ` · due ${formatISODayMonth(e.dueDate)}` : ""}.`, url: `/rooms/${e.roomId}?tab=expenses`,
+    });
+  }
+}
+
+function upsertExpensePayment(store: Store, expenseId: string, userId: string, paid: boolean, amount: number | null, recordedBy: string | null) {
+  let k = store.expensePayments.find((x) => x.expenseId === expenseId && x.userId === userId);
+  if (!k) {
+    k = { expenseId, userId, amount: null, paidAt: null, recordedBy: null };
+    store.expensePayments.push(k);
+  }
+  k.paidAt = paid ? k.paidAt ?? new Date().toISOString() : null;
+  k.amount = amount;
+  k.recordedBy = recordedBy;
+}
+
+function toExpense(store: Store, e: StoredExpense, me: string): Expense {
+  const acc = store.upi.find((u) => u.id === e.upiAccountId) ?? null;
+  const paid = store.expensePayments.filter((x) => x.expenseId === e.id && x.paidAt);
+  const mine = store.expensePayments.find((x) => x.expenseId === e.id && x.userId === me);
+  return {
+    id: e.id, roomId: e.roomId, title: e.title, purpose: e.purpose, totalAmount: e.totalAmount, splitAmount: e.splitAmount,
+    upi: acc ? { id: acc.id, upiId: acc.upiId, payeeName: acc.payeeName, qrImageUrl: acc.qrImageUrl } : null,
+    dueDate: e.dueDate, status: e.status, createdById: e.createdBy, createdByName: store.profiles.find((x) => x.id === e.createdBy)?.fullName ?? null,
+    paidCount: paid.length, eligibleCount: memberCount(store, e.roomId), collected: paid.reduce((n, x) => n + (x.amount ?? e.splitAmount ?? 0), 0),
+    myPaidAt: mine?.paidAt ?? null, myAmount: mine?.amount ?? null,
+  };
+}
+
 function isModerator(store: Store, roomId: string, userId: string) {
   const m = membership(store, roomId, userId);
   return m?.status === "approved" && m.role === "moderator";
@@ -308,11 +451,11 @@ function newCode(store: Store) {
   }
 }
 
-function notify(store: Store, userId: string, n: Omit<StoredNotification, "id" | "userId" | "createdAt" | "readAt">) {
+function notify(store: Store, userId: string, n: Omit<StoredNotification, "id" | "userId" | "createdAt" | "readAt" | "priority">) {
   if (n.celebrationId && store.notifications.some((x) => x.userId === userId && x.celebrationId === n.celebrationId && x.kind === n.kind)) {
     return;
   }
-  store.notifications.unshift({ ...n, id: uid("n"), userId, createdAt: new Date().toISOString(), readAt: null });
+  store.notifications.unshift({ ...n, id: uid("n"), userId, createdAt: new Date().toISOString(), readAt: null, priority: isPriority(n.kind) });
 }
 
 /** Celebrations in the next `days` days for a room (all of them, including the caller's own). */
@@ -337,6 +480,10 @@ function roomCelebrations(store: Store, roomId: string, days = DECISION_WINDOW_D
         date,
         status: date === today ? "live" : "upcoming",
         decision: store.decisions[id] ?? (room?.autoCelebrate ? "celebrate" : "pending"),
+        purpose: store.celDetails[id]?.purpose ?? null,
+        totalExpense: store.celDetails[id]?.totalExpense ?? null,
+        plan: store.celDetails[id]?.plan ?? null,
+        splitAmount: splitAmount(store.celDetails[id]?.totalExpense, memberCount(store, roomId) - 1),
       } satisfies Celebration];
     })
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -357,15 +504,15 @@ function runReminders(store: Store) {
       const due = dueReminders({ settings: room, decision: c.decision, date: c.date, today, time });
       const approved = store.memberships.filter((m) => m.roomId === room.id && m.status === "approved");
       for (const kind of due.toMembers) {
-        const url = kind === "wish_reminder" ? `/rooms/${room.id}` : `/rooms/${room.id}/surprise/${c.id}`;
+        const url = kind === "wish_reminder" ? `/rooms/${room.id}/wall/${c.id}` : `/rooms/${room.id}/surprise/${c.id}`;
         for (const m of approved) if (m.userId !== c.birthdayUserId) notify(store, m.userId, { roomId: room.id, celebrationId: c.id, kind, ...reminderText(kind, first, room.name), url });
       }
       for (const kind of due.toBirthdayPerson) {
-        notify(store, c.birthdayUserId, { roomId: room.id, celebrationId: c.id, kind, ...reminderText(kind, first, room.name), url: `/rooms/${room.id}` });
+        notify(store, c.birthdayUserId, { roomId: room.id, celebrationId: c.id, kind, ...reminderText(kind, first, room.name), url: `/rooms/${room.id}/wall/${c.id}` });
       }
       for (const kind of due.toAdmins) {
         for (const m of approved) {
-          if (m.role === "member" || m.userId === c.birthdayUserId) continue;
+          if (!isAdminRole(m.role) || m.userId === c.birthdayUserId) continue;
           notify(store, m.userId, { roomId: room.id, celebrationId: c.id, kind, ...reminderText(kind, first, room.name), url: `/rooms/${room.id}/manage?tab=birthdays` });
         }
       }
@@ -374,7 +521,7 @@ function runReminders(store: Store) {
 }
 
 function toRoom(r: StoredRoom, m: StoredMembership): Room {
-  const admin = m.status === "approved" && m.role !== "member";
+  const admin = m.status === "approved" && isAdminRole(m.role);
   return {
     id: r.id, name: r.name, code: admin ? r.code : null, amountMode: r.amountMode, amount: r.amount,
     payersPerUpi: r.payersPerUpi, remindWeekBefore: r.remindWeekBefore, remindDayBefore: r.remindDayBefore,
@@ -453,7 +600,7 @@ export const mockApi: DataApi = {
     if (existing) Object.assign(existing, { status: "pending", requestedAt: new Date().toISOString() });
     else store.memberships.push({ roomId: r.id, userId: me.id, role: "member", status: "pending", requestedAt: new Date().toISOString() });
     for (const m of store.memberships) {
-      if (m.roomId === r.id && m.status === "approved" && m.role !== "member") {
+      if (m.roomId === r.id && m.status === "approved" && isAdminRole(m.role)) {
         notify(store, m.userId, { roomId: r.id, celebrationId: null, kind: "join_request", title: "New join request", body: `${me.fullName} wants to join ${r.name}`, url: `/rooms/${r.id}/manage` });
       }
     }
@@ -720,7 +867,7 @@ export const mockApi: DataApi = {
       } else mine.upiAccountId = pick.accountId;
       if (allFull) {
         for (const m of store.memberships) {
-          if (m.roomId === room.id && m.status === "approved" && m.role !== "member" && m.userId !== c.birthdayUserId) {
+          if (m.roomId === room.id && m.status === "approved" && isAdminRole(m.role) && m.userId !== c.birthdayUserId) {
             notify(store, m.userId, { roomId: room.id, celebrationId: id, kind: "upi_full", title: "All UPI IDs are full", body: `Every UPI ID in ${room.name} has reached ${room.payersPerUpi} payers. Add another one.`, url: `/rooms/${room.id}/manage/edit` });
           }
         }
@@ -733,6 +880,7 @@ export const mockApi: DataApi = {
       upi: acc ? { id: acc.id, upiId: acc.upiId, payeeName: acc.payeeName, qrImageUrl: acc.qrImageUrl } : null,
       amountMode: room.amountMode, amount: room.amount, allUpiFull: allFull,
       myPaidAt: mine.paidAt, myAmount: mine.amount,
+      purpose: c.purpose, plan: c.plan, totalExpense: c.totalExpense, splitAmount: c.splitAmount,
     }, 200);
   },
 
@@ -747,8 +895,14 @@ export const mockApi: DataApi = {
       mine = { celebrationId: id, userId: me, upiAccountId: null, amount: null, paidAt: null };
       store.contributions.push(mine);
     }
+    if (c.splitAmount != null) {
+      const value = amount ?? c.splitAmount;
+      const problem = paid ? checkContribution(value, c.splitAmount) : null;
+      if (problem) throw new DataError("invalid_input", problem);
+      mine.amount = value;
+    } else if (room.amountMode !== "fixed" && amount != null) mine.amount = amount;
     mine.paidAt = paid ? mine.paidAt ?? new Date().toISOString() : null;
-    if (room.amountMode !== "fixed" && amount != null) mine.amount = amount;
+    mine.recordedBy = null;
     persist(store);
   },
 
@@ -771,19 +925,318 @@ export const mockApi: DataApi = {
     const me = requireUser();
     const store = load();
     const c = findCelebration(store, id);
-    if (!c || c.birthdayUserId === me || !isAdmin(store, c.roomId, me)) throw new DataError("not_found");
+    if (!c || c.birthdayUserId === me || !isRep(store, c.roomId, me)) throw new DataError("not_found");
     return store.memberships
       .filter((m) => m.roomId === c.roomId && m.status === "approved" && m.userId !== c.birthdayUserId)
       .map((m) => {
         const p = store.profiles.find((x) => x.id === m.userId)!;
         const k = store.contributions.find((x) => x.celebrationId === id && x.userId === m.userId);
-        return { userId: p.id, fullName: p.fullName, username: p.username, upiId: store.upi.find((u) => u.id === k?.upiAccountId)?.upiId ?? null, amount: k?.amount ?? null, paidAt: k?.paidAt ?? null };
+        return { userId: p.id, fullName: p.fullName, username: p.username, upiId: store.upi.find((u) => u.id === k?.upiAccountId)?.upiId ?? null, amount: k?.amount ?? null, paidAt: k?.paidAt ?? null, recordedBy: k?.recordedBy ?? null };
       })
       .sort((a, b) => (a.paidAt ? 0 : 1) - (b.paidAt ? 0 : 1) || a.fullName.localeCompare(b.fullName));
   },
 
   onPoolChange(_id, cb) {
     return onChange(cb);
+  },
+
+  async setCelebrationDetails(id, input) {
+    const me = requireUser();
+    const store = load();
+    const c = findCelebration(store, id);
+    if (!c || c.birthdayUserId === me || !isAdmin(store, c.roomId, me)) throw new DataError("not_allowed");
+    store.celDetails[id] = {
+      purpose: input.purpose?.trim() || null,
+      totalExpense: input.totalExpense && input.totalExpense > 0 ? Math.round(input.totalExpense) : null,
+      plan: input.plan?.trim() || null,
+    };
+    persist(store);
+  },
+
+  async recordCelebrationPayment(id, userId, paid, amount) {
+    const me = requireUser();
+    const store = load();
+    const c = findCelebration(store, id);
+    if (!c || c.birthdayUserId === me || c.birthdayUserId === userId || !isRep(store, c.roomId, me) || c.decision !== "celebrate") {
+      throw new DataError("not_allowed");
+    }
+    const room = store.rooms.find((r) => r.id === c.roomId)!;
+    const value = amount ?? c.splitAmount ?? room.amount;
+    const problem = paid ? checkContribution(value, c.splitAmount) : null;
+    if (problem) throw new DataError("invalid_input", problem);
+    let k = store.contributions.find((x) => x.celebrationId === id && x.userId === userId);
+    if (!k) {
+      k = { celebrationId: id, userId, upiAccountId: null, amount: null, paidAt: null };
+      store.contributions.push(k);
+    }
+    k.paidAt = paid ? k.paidAt ?? new Date().toISOString() : null;
+    k.amount = value ?? k.amount;
+    k.recordedBy = me;
+    persist(store);
+  },
+
+  async getPoll(celebrationId) {
+    const me = requireUser();
+    const store = load();
+    const c = findCelebration(store, celebrationId);
+    if (!c || c.birthdayUserId === me || !isMember(store, c.roomId, me)) return null;
+    if (c.decision !== "celebrate" && !isAdmin(store, c.roomId, me)) return null;
+    const poll = store.polls.find((x) => x.celebrationId === celebrationId);
+    return poll ? toPoll(store, poll, me) : null;
+  },
+
+  async createPoll(celebrationId, question, options) {
+    const me = requireUser();
+    const store = load();
+    const c = findCelebration(store, celebrationId);
+    if (!c || c.birthdayUserId === me || !isAdmin(store, c.roomId, me)) throw new DataError("not_allowed");
+    if (store.polls.some((x) => x.celebrationId === celebrationId)) throw new DataError("invalid_input", "This birthday already has a vote.");
+    if (options.length < 2 || options.length > 8) throw new DataError("invalid_input", "Add 2 to 8 options.");
+    const poll: StoredPoll = {
+      id: uid("poll"), roomId: c.roomId, celebrationId, question: question.trim(), status: "open", winnerOptionId: null,
+      options: options.map((o, i) => ({ id: uid("opt"), label: o.label.trim(), price: o.price, sortOrder: i })),
+    };
+    store.polls.push(poll);
+    if (c.decision === "celebrate") {
+      const first = c.birthdayName.split(" ")[0];
+      for (const m of store.memberships) {
+        if (m.roomId !== c.roomId || m.status !== "approved" || m.userId === c.birthdayUserId) continue;
+        notify(store, m.userId, { roomId: c.roomId, celebrationId, kind: "poll_open", title: `Vote: ${poll.question}`, body: `Pick one before the vote closes. Don't tell ${first}.`, url: `/rooms/${c.roomId}/surprise/${celebrationId}` });
+      }
+    }
+    persist(store);
+  },
+
+  async votePoll(pollId, optionId) {
+    const me = requireUser();
+    const store = load();
+    const poll = store.polls.find((x) => x.id === pollId);
+    if (!poll || poll.status !== "open" || !poll.options.some((o) => o.id === optionId)) throw new DataError("not_allowed");
+    const c = poll.celebrationId ? findCelebration(store, poll.celebrationId) : null;
+    if (c && (c.birthdayUserId === me || !isMember(store, c.roomId, me))) throw new DataError("not_allowed");
+    store.pollVotes = store.pollVotes.filter((v) => !(v.pollId === pollId && v.userId === me));
+    store.pollVotes.push({ pollId, userId: me, optionId });
+    persist(store);
+  },
+
+  async closePoll(pollId) {
+    const me = requireUser();
+    const store = load();
+    const poll = store.polls.find((x) => x.id === pollId);
+    if (!poll || !isAdmin(store, poll.roomId, me)) throw new DataError("not_allowed");
+    const winner = pickWinner(poll.options.map((o) => ({ id: o.id, price: o.price, sortOrder: o.sortOrder, votes: store.pollVotes.filter((v) => v.optionId === o.id).length })));
+    poll.status = "closed";
+    poll.winnerOptionId = winner;
+    const w = poll.options.find((o) => o.id === winner);
+    if (poll.celebrationId && w?.price) {
+      const d = store.celDetails[poll.celebrationId] ?? { purpose: null, totalExpense: null, plan: null };
+      store.celDetails[poll.celebrationId] = { ...d, totalExpense: w.price, purpose: d.purpose ?? w.label };
+    }
+    persist(store);
+  },
+
+  async deletePoll(pollId) {
+    const me = requireUser();
+    const store = load();
+    const poll = store.polls.find((x) => x.id === pollId);
+    if (!poll || !isAdmin(store, poll.roomId, me)) throw new DataError("not_allowed");
+    store.polls = store.polls.filter((x) => x.id !== pollId);
+    store.pollVotes = store.pollVotes.filter((v) => v.pollId !== pollId);
+    persist(store);
+  },
+
+  async listExpenses(roomId) {
+    const me = requireUser();
+    const store = load();
+    if (!isMember(store, roomId, me)) return [];
+    const rep = isRep(store, roomId, me);
+    return delay(
+      store.expenses
+        .filter((e) => e.roomId === roomId && (rep || e.status === "approved" || e.status === "closed"))
+        .sort((a, b) => Number(b.status === "requested") - Number(a.status === "requested") || b.createdAt.localeCompare(a.createdAt))
+        .map((e) => toExpense(store, e, me)),
+      80,
+    );
+  },
+
+  async listUpiChoices(roomId) {
+    const me = requireUser();
+    const store = load();
+    if (!isRep(store, roomId, me)) throw new DataError("not_allowed");
+    return store.upi.filter((u) => u.roomId === roomId && u.active).sort((a, b) => a.sortOrder - b.sortOrder).map((u) => ({ id: u.id, upiId: u.upiId, payeeName: u.payeeName }));
+  },
+
+  async requestExpense(roomId, input) {
+    const me = requireUser();
+    const store = load();
+    if (!isRep(store, roomId, me)) throw new DataError("not_allowed");
+    if (!input.title.trim() || !(input.totalAmount > 0)) throw new DataError("invalid_input", "Add a title and a total.");
+    const e: StoredExpense = {
+      id: uid("exp"), roomId, title: input.title.trim(), purpose: input.purpose?.trim() || null, totalAmount: Math.round(input.totalAmount),
+      splitAmount: null, upiAccountId: input.upiAccountId, dueDate: input.dueDate, status: "requested", createdBy: me, createdAt: new Date().toISOString(),
+    };
+    store.expenses.push(e);
+    if (isAdmin(store, roomId, me)) approveExpense(store, e);
+    else {
+      const who = store.profiles.find((x) => x.id === me)?.fullName ?? "A class rep";
+      for (const m of store.memberships) {
+        if (m.roomId === roomId && m.status === "approved" && (m.role === "moderator" || m.role === "co_moderator")) {
+          notify(store, m.userId, { roomId, celebrationId: null, kind: "expense_request", title: `Split request: ${e.title}`, body: `${who} wants to split ₹${e.totalAmount}. Approve it before the class sees it.`, url: `/rooms/${roomId}/manage?tab=expenses` });
+        }
+      }
+    }
+    persist(store);
+  },
+
+  async decideExpense(expenseId, approve) {
+    const me = requireUser();
+    const store = load();
+    const e = store.expenses.find((x) => x.id === expenseId);
+    if (!e || !isAdmin(store, e.roomId, me)) throw new DataError("not_allowed");
+    if (e.status !== "requested") throw new DataError("invalid_input", "Already decided.");
+    if (approve) approveExpense(store, e);
+    else e.status = "declined";
+    persist(store);
+  },
+
+  async markExpensePaid(expenseId, paid, amount) {
+    const me = requireUser();
+    const store = load();
+    const e = store.expenses.find((x) => x.id === expenseId);
+    if (!e || e.status !== "approved" || !isMember(store, e.roomId, me)) throw new DataError("not_found");
+    const value = amount ?? e.splitAmount;
+    const problem = paid ? checkContribution(value, e.splitAmount) : null;
+    if (problem) throw new DataError("invalid_input", problem);
+    upsertExpensePayment(store, expenseId, me, paid, value, null);
+    persist(store);
+  },
+
+  async getExpensePayers(expenseId) {
+    const me = requireUser();
+    const store = load();
+    const e = store.expenses.find((x) => x.id === expenseId);
+    if (!e || !isRep(store, e.roomId, me)) throw new DataError("not_allowed");
+    return store.memberships
+      .filter((m) => m.roomId === e.roomId && m.status === "approved")
+      .map((m): Payer => {
+        const p = store.profiles.find((x) => x.id === m.userId)!;
+        const k = store.expensePayments.find((x) => x.expenseId === expenseId && x.userId === m.userId);
+        return { userId: p.id, fullName: p.fullName, username: p.username, upiId: null, amount: k?.amount ?? null, paidAt: k?.paidAt ?? null, recordedBy: k?.recordedBy ?? null };
+      })
+      .sort((a, b) => (a.paidAt ? 0 : 1) - (b.paidAt ? 0 : 1) || a.fullName.localeCompare(b.fullName));
+  },
+
+  async recordExpensePayment(expenseId, userId, paid, amount) {
+    const me = requireUser();
+    const store = load();
+    const e = store.expenses.find((x) => x.id === expenseId);
+    if (!e || e.status !== "approved" || !isRep(store, e.roomId, me) || !isMember(store, e.roomId, userId)) throw new DataError("not_allowed");
+    const value = amount ?? e.splitAmount;
+    const problem = paid ? checkContribution(value, e.splitAmount) : null;
+    if (problem) throw new DataError("invalid_input", problem);
+    upsertExpensePayment(store, expenseId, userId, paid, value, me);
+    persist(store);
+  },
+
+  async closeExpense(expenseId) {
+    const me = requireUser();
+    const store = load();
+    const e = store.expenses.find((x) => x.id === expenseId);
+    if (!e || !isAdmin(store, e.roomId, me)) throw new DataError("not_allowed");
+    e.status = "closed";
+    persist(store);
+  },
+
+  async deleteExpense(expenseId) {
+    const me = requireUser();
+    const store = load();
+    const e = store.expenses.find((x) => x.id === expenseId);
+    if (!e || !(isAdmin(store, e.roomId, me) || (e.createdBy === me && e.status === "requested"))) throw new DataError("not_allowed");
+    store.expenses = store.expenses.filter((x) => x.id !== expenseId);
+    store.expensePayments = store.expensePayments.filter((x) => x.expenseId !== expenseId);
+    persist(store);
+  },
+
+  async getWall(celebrationId) {
+    const me = requireUser();
+    const store = load();
+    const [, roomId, bdayId, date] = celebrationId.split(".");
+    if (!roomId || !bdayId || !date || !isMember(store, roomId, me)) return null;
+    const isMe = bdayId === me;
+    const today = todayIST();
+    if (isMe && today < date) return null;
+    const room = store.rooms.find((r) => r.id === roomId);
+    const bday = store.profiles.find((x) => x.id === bdayId);
+    if (!room || !bday) return null;
+    const decision = store.decisions[celebrationId] ?? (room.autoCelebrate ? "celebrate" : "pending");
+    const all = store.wishes.filter((w) => w.celebrationId === celebrationId);
+    const visible = all.filter((w) => isMe || !w.isPrivate || w.authorId === me);
+    return delay({
+      info: {
+        celebrationId, roomId, roomName: room.name, birthdayName: bday.fullName, date, revealed: today >= date, isBirthdayPerson: isMe,
+        plan: isMe || decision === "celebrate" || isAdmin(store, roomId, me) ? store.celDetails[celebrationId]?.plan ?? null : null,
+        wishCount: all.length,
+      },
+      wishes: visible.map((w) => ({ ...w, authorName: store.profiles.find((x) => x.id === w.authorId)?.fullName ?? "A classmate", mine: w.authorId === me })),
+    }, 80);
+  },
+
+  async addWish(celebrationId, input) {
+    const me = requireUser();
+    const store = load();
+    const [, roomId, bdayId] = celebrationId.split(".");
+    if (!roomId || bdayId === me || !isMember(store, roomId, me)) throw new DataError("not_found");
+    if (!input.message.trim()) throw new DataError("invalid_input", "Write something first.");
+    if (store.wishes.filter((w) => w.celebrationId === celebrationId && w.authorId === me).length >= 5) throw new DataError("invalid_input", "Up to 5 notes each.");
+    store.wishes.push({
+      id: uid("wish"), celebrationId, authorId: me, message: input.message.trim().slice(0, 500), isPrivate: input.isPrivate, color: input.color,
+      x: 4 + Math.random() * 70, y: 4 + Math.random() * 72, rotation: -6 + Math.random() * 12, createdAt: new Date().toISOString(),
+    });
+    persist(store);
+  },
+
+  async moveWish(wishId, x, y) {
+    const me = requireUser();
+    const store = load();
+    const w = store.wishes.find((v) => v.id === wishId);
+    if (!w) throw new DataError("not_found");
+    const [, , bdayId, date] = w.celebrationId.split(".");
+    const canMove = w.authorId === me || (bdayId === me && todayIST() >= (date ?? ""));
+    if (!canMove) throw new DataError("not_allowed");
+    w.x = Math.min(100, Math.max(0, x));
+    w.y = Math.min(100, Math.max(0, y));
+    persist(store);
+  },
+
+  async deleteWish(wishId) {
+    const me = requireUser();
+    const store = load();
+    const w = store.wishes.find((v) => v.id === wishId);
+    if (!w) throw new DataError("not_found");
+    const [, roomId, bdayId] = w.celebrationId.split(".");
+    if (!(w.authorId === me || (isAdmin(store, roomId!, me) && bdayId !== me))) throw new DataError("not_allowed");
+    store.wishes = store.wishes.filter((v) => v.id !== wishId);
+    persist(store);
+  },
+
+  async myBirthdayWalls() {
+    const me = currentUserId();
+    if (!me) return [];
+    const store = load();
+    const today = todayIST();
+    const out: { celebrationId: string; roomId: string; roomName: string; date: string; wishCount: number }[] = [];
+    for (const m of store.memberships) {
+      if (m.userId !== me || m.status !== "approved") continue;
+      const p = store.profiles.find((x) => x.id === me);
+      const room = store.rooms.find((r) => r.id === m.roomId);
+      if (!p || !room) continue;
+      const { month, day } = parseISODate(p.dob);
+      const date = birthdayInYear(month, day, Number(today.slice(0, 4)));
+      if (date > today || daysBetween(date, today) > 30) continue;
+      const id = celebrationId(room.id, me, date);
+      out.push({ celebrationId: id, roomId: room.id, roomName: room.name, date, wishCount: store.wishes.filter((w) => w.celebrationId === id).length });
+    }
+    return out;
   },
 
   async listNotifications() {

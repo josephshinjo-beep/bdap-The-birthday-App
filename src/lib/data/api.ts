@@ -4,6 +4,14 @@ import type {
   AppNotification,
   Celebration,
   CelebrationDecision,
+  CelebrationDetailsInput,
+  Expense,
+  ExpenseInput,
+  Poll,
+  PollOptionInput,
+  WallInfo,
+  Wish,
+  WishInput,
   CreateRoomInput,
   Member,
   MemberStatus,
@@ -75,6 +83,37 @@ export interface DataApi {
   getPool(celebrationId: string): Promise<Pool>;
   getPayers(celebrationId: string): Promise<Payer[]>;
   onPoolChange(celebrationId: string, cb: () => void): Unsubscribe;
+  /** Admins: what the money is for, the total (split equally) and the plan for the day. */
+  setCelebrationDetails(celebrationId: string, input: CelebrationDetailsInput): Promise<void>;
+  /** Class reps and admins: record that someone paid (e.g. cash). */
+  recordCelebrationPayment(celebrationId: string, userId: string, paid: boolean, amount?: number | null): Promise<void>;
+
+  // votes (e.g. cake flavour); closing sets the celebration's total to the winner's price
+  getPoll(celebrationId: string): Promise<Poll | null>;
+  createPoll(celebrationId: string, question: string, options: PollOptionInput[]): Promise<void>;
+  votePoll(pollId: string, optionId: string): Promise<void>;
+  closePoll(pollId: string): Promise<void>;
+  deletePoll(pollId: string): Promise<void>;
+
+  // class expenses: class reps request, admins approve, everyone pays their share
+  listExpenses(roomId: string): Promise<Expense[]>;
+  /** Class reps and admins: the room's active UPI IDs to collect a split. */
+  listUpiChoices(roomId: string): Promise<{ id: string; upiId: string; payeeName: string }[]>;
+  requestExpense(roomId: string, input: ExpenseInput): Promise<void>;
+  decideExpense(expenseId: string, approve: boolean): Promise<void>;
+  markExpensePaid(expenseId: string, paid: boolean, amount?: number | null): Promise<void>;
+  getExpensePayers(expenseId: string): Promise<Payer[]>;
+  recordExpensePayment(expenseId: string, userId: string, paid: boolean, amount?: number | null): Promise<void>;
+  closeExpense(expenseId: string): Promise<void>;
+  deleteExpense(expenseId: string): Promise<void>;
+
+  // the birthday wall (revealed to the birthday person on the day)
+  getWall(celebrationId: string): Promise<{ info: WallInfo; wishes: Wish[] } | null>;
+  addWish(celebrationId: string, input: WishInput): Promise<void>;
+  moveWish(wishId: string, x: number, y: number): Promise<void>;
+  deleteWish(wishId: string): Promise<void>;
+  /** The caller's own walls from the last 30 days (for the "your wall is ready" banner). */
+  myBirthdayWalls(): Promise<{ celebrationId: string; roomId: string; roomName: string; date: string; wishCount: number }[]>;
 
   // notifications
   listNotifications(): Promise<AppNotification[]>;

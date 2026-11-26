@@ -3,11 +3,12 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useMemo, useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
+import { ExpensesPanel } from "@/components/expenses-panel";
 import { Avatar, BackLink, Columns, Countdown, DateBlock, EmptyState, ErrorNote, Loading, Page, TabPanel, Tabs, roleLabel } from "@/components/ui";
 import { data } from "@/lib/data";
 import { daysBetween, nextBirthday, parseISODate, relativeDays, todayIST } from "@/lib/dates";
 import { useAsync } from "@/lib/use-async";
-import type { Celebration, Member, Room, Session } from "@/lib/types";
+import { isAdminRole, type Celebration, type Member, type Room, type Session } from "@/lib/types";
 
 export function RoomView() {
   return <AuthGate>{(s) => <RoomLoader session={s} />}</AuthGate>;
@@ -35,14 +36,19 @@ function RoomLoader({ session }: { session: Session }) {
   return <RoomHome room={room.data} session={session} />;
 }
 
-type Tab = "upcoming" | "members" | "me";
+type Tab = "upcoming" | "expenses" | "members" | "me";
+const TABS: Tab[] = ["upcoming", "expenses", "members", "me"];
 
 function RoomHome({ room, session }: { room: Room; session: Session }) {
-  const viewAsMember = useSearchParams().get("as") === "member";
-  const [tab, setTab] = useState<Tab>("upcoming");
+  const params = useSearchParams();
+  const viewAsMember = params.get("as") === "member";
+  const initialTab = params.get("tab") as Tab | null;
+  const [tab, setTab] = useState<Tab>(initialTab && TABS.includes(initialTab) ? initialTab : "upcoming");
+  const walls = useAsync(() => data.myBirthdayWalls(), [session.userId]);
+  const myWall = (walls.data ?? []).find((w) => w.roomId === room.id);
   const members = useAsync(() => data.listMembers(room.id), [room.id]);
   const celebrations = useAsync(() => data.upcomingCelebrations(room.id), [room.id]);
-  const isAdmin = room.myRole !== "member" && !viewAsMember;
+  const isAdmin = isAdminRole(room.myRole) && !viewAsMember;
   const approved = useMemo(() => (members.data ?? []).filter((m) => m.status === "approved"), [members.data]);
   const pendingCount = (members.data ?? []).filter((m) => m.status === "pending").length;
 
@@ -58,7 +64,7 @@ function RoomHome({ room, session }: { room: Room; session: Session }) {
             Manage
             {pendingCount > 0 && <span className="pill pill-pink">{pendingCount} new<span className="sr-only"> join requests</span></span>}
           </Link>
-        ) : viewAsMember && room.myRole !== "member" ? (
+        ) : viewAsMember && isAdminRole(room.myRole) ? (
           <Link href={`/rooms/${room.id}/manage`} className="inline-flex min-h-11 items-center text-sm font-bold text-plum">Back to dashboard</Link>
         ) : null}
       </div>
@@ -67,6 +73,17 @@ function RoomHome({ room, session }: { room: Room; session: Session }) {
         {members.data && <span className="pill">{approved.length} members</span>}
       </div>
 
+      {myWall && (
+        <Link href={`/rooms/${room.id}/wall/${myWall.celebrationId}`} className="pop-in flex items-center justify-between gap-3 rounded-[20px] bg-plum p-4 text-white">
+          <span>
+            <b className="block font-display text-xl">Happy birthday! 🎉 Your wall is ready</b>
+            <span className="text-sm text-plum-soft">
+              {myWall.wishCount ? `${myWall.wishCount} notes from ${room.name} are waiting for you.` : `Your classmates are writing on it.`}
+            </span>
+          </span>
+          <span aria-hidden="true" className="text-2xl">→</span>
+        </Link>
+      )}
       <Columns
         main={
           <>
@@ -76,6 +93,7 @@ function RoomHome({ room, session }: { room: Room; session: Session }) {
               onChange={setTab}
               tabs={[
                 { id: "upcoming", label: "Upcoming" },
+                { id: "expenses", label: "Expenses" },
                 { id: "members", label: "Members" },
                 { id: "me", label: "Me" },
               ]}
@@ -84,6 +102,11 @@ function RoomHome({ room, session }: { room: Room; session: Session }) {
             {tab === "upcoming" && (
               <TabPanel id="upcoming">
                 {loaded ? <Upcoming room={room} members={approved} celebrations={cels} me={session.userId} /> : <Loading />}
+              </TabPanel>
+            )}
+            {tab === "expenses" && (
+              <TabPanel id="expenses">
+                {members.loading ? <Loading /> : <ExpensesPanel room={room} memberCount={approved.length} />}
               </TabPanel>
             )}
             {tab === "members" && <TabPanel id="members">{members.loading ? <Loading /> : <MemberList members={approved} me={session.userId} />}</TabPanel>}
@@ -143,6 +166,7 @@ function Upcoming({ room, members, celebrations, me }: { room: Room; members: Me
             const days = daysBetween(today, date);
             const isMe = m.userId === me;
             const { month, day } = parseISODate(date);
+            const cel = celebrations.find((c) => c.birthdayUserId === m.userId && c.date === date);
             return (
               <li key={m.userId} className="grid grid-cols-[44px_1fr_auto] items-center gap-2.5 py-2.5">
                 <DateBlock month={month} day={day} />
@@ -150,7 +174,11 @@ function Upcoming({ room, members, celebrations, me }: { room: Room; members: Me
                   <span className="block truncate">{isMe ? "You" : m.fullName}</span>
                   <small className="block truncate text-xs font-normal text-muted">{isMe ? "Your room goes quiet for you" : `@${m.username}`}</small>
                 </div>
-                {isMe ? (
+                {cel && !isMe ? (
+                  <Link href={`/rooms/${room.id}/wall/${cel.id}`} className="pill pill-mint hover:underline" aria-label={`Write on ${m.fullName}'s birthday wall`}>
+                    ✍️ Wall · {days === 0 ? "today" : days === 1 ? "tomorrow" : `${days}d`}
+                  </Link>
+                ) : isMe ? (
                   <span className="pill pill-sun">That&apos;s you</span>
                 ) : days === 0 ? (
                   <span className="pill pill-pink">Today</span>
@@ -212,7 +240,7 @@ function MemberList({ members, me }: { members: Member[]; me: string }) {
             <span className="block truncate">{m.fullName}{m.userId === me && " (you)"}</span>
             <small className="block text-xs font-normal text-muted">@{m.username} · {m.birthDay} {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m.birthMonth - 1]}</small>
           </div>
-          {m.role !== "member" ? <span className={`pill ${m.role === "moderator" ? "" : "pill-mint"}`}>{roleLabel(m.role)}</span> : <span />}
+          {m.role !== "member" ? <span className={`pill ${m.role === "moderator" ? "" : m.role === "class_rep" ? "pill-sun" : "pill-mint"}`}>{roleLabel(m.role)}</span> : <span />}
         </li>
       ))}
     </ul>

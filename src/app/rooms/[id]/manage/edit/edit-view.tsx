@@ -8,7 +8,7 @@ import { RoomSettingsFields, UpiFields, ownerOptions, settingsValid, upiDraftVal
 import { BackLink, Columns, EmptyState, ErrorNote, Loading, Page, roleLabel } from "@/components/ui";
 import { data } from "@/lib/data";
 import { useAsync } from "@/lib/use-async";
-import type { Member, Room, RoomSettingsInput, Session, UpiAccount } from "@/lib/types";
+import { isAdminRole, type Member, type Room, type RoomSettingsInput, type Session, type UpiAccount } from "@/lib/types";
 
 export function EditView() {
   return <AuthGate>{(s) => <EditLoader session={s} />}</AuthGate>;
@@ -26,7 +26,7 @@ function EditLoader({ session }: { session: Session }) {
         <Loading />
       </Page>
     );
-  if (!room.data || room.data.myRole === "member" || room.data.myStatus !== "approved") {
+  if (!room.data || !isAdminRole(room.data.myRole) || room.data.myStatus !== "approved") {
     return (
       <Page>
         <EmptyState

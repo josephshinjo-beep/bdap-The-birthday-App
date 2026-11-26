@@ -64,6 +64,17 @@ export function daysBetween(aISO: string, bISO: string): number {
   );
 }
 
+/** A date of birth must be in an earlier calendar year than today (and after 1900). */
+export function dobAllowed(dob: string, today: string = todayIST()): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) return false;
+  return dob >= "1900-01-01" && Number(dob.slice(0, 4)) < Number(today.slice(0, 4));
+}
+
+/** The latest date of birth allowed: 31 Dec of last year. */
+export function maxDob(today: string = todayIST()): string {
+  return `${Number(today.slice(0, 4)) - 1}-12-31`;
+}
+
 /** The current time of day in India, "HH:MM" (24-hour). */
 export function timeIST(now: Date = new Date()): string {
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
