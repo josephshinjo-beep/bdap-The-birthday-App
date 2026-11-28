@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { data } from "@/lib/data";
+import { isIOS, isStandalone, iosSupportsPush } from "@/components/install-prompt";
 
 type PushState = "loading" | "unsupported" | "ios-install" | "denied" | "off" | "on";
 
@@ -14,14 +15,6 @@ function base64ToBytes(base64: string) {
   const bytes = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
   return bytes;
-}
-
-function isIOS() {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-}
-
-function isStandalone() {
-  return window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 }
 
 async function detect(): Promise<PushState> {
@@ -38,7 +31,6 @@ export function PushPrompt({ variant = "banner" }: { variant?: "banner" | "setti
   const [state, setState] = useState<PushState>("loading");
   const [dismissed, setDismissed] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [testing, setTesting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -74,44 +66,6 @@ export function PushPrompt({ variant = "banner" }: { variant?: "banner" | "setti
     }
   }
 
-  async function sendTest() {
-    setBusy(true);
-    setTesting(true);
-    setMsg(null);
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        setState("off");
-        setMsg("This device isn't subscribed any more. Turn notifications on again.");
-        return;
-      }
-      let result = await data.sendTestPush(sub.endpoint);
-      if (result.devices === 0) {
-        // Subscribed in the browser but not saved on the server (e.g. saved before sign-in): save it and retry once.
-        const json = sub.toJSON();
-        await data.savePushSubscription({ endpoint: sub.endpoint, p256dh: json.keys?.p256dh ?? "", auth: json.keys?.auth ?? "", userAgent: navigator.userAgent.slice(0, 200) });
-        result = await data.sendTestPush(sub.endpoint);
-      }
-      if (result.sent > 0) {
-        setMsg("Sent! It should pop up within a few seconds. Nothing? Check Do Not Disturb or Focus mode, and that notifications for this app or browser are allowed in your device settings.");
-      } else if (result.gone > 0) {
-        await sub.unsubscribe().catch(() => {});
-        setState("off");
-        setMsg("This device's registration had expired, so it was removed. Turn notifications on again.");
-      } else if (result.failed > 0) {
-        setMsg("The push service rejected the message. Usually the two VAPID keys in Vercel aren't a matching pair: fix them, redeploy, then turn notifications off and on again here.");
-      } else {
-        setMsg("This device couldn't be registered on the server. Turn notifications off and on again, then retry.");
-      }
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Couldn't send the test notification.");
-    } finally {
-      setBusy(false);
-      setTesting(false);
-    }
-  }
-
   async function disable() {
     setBusy(true);
     try {
@@ -128,18 +82,18 @@ export function PushPrompt({ variant = "banner" }: { variant?: "banner" | "setti
   }
 
   if (state === "loading") return null;
-  if (variant === "banner" && (dismissed || state === "on" || state === "unsupported" || state === "denied")) return null;
+  // On iPhone the app-wide install banner already asks people to install first, so don't add a second prompt.
+  if (variant === "banner" && (dismissed || state === "on" || state === "unsupported" || state === "denied" || state === "ios-install")) return null;
 
   const body =
     state === "ios-install" ? (
       <>
-        <p className="font-bold text-plum">Get birthday heads-ups on your iPhone</p>
-        <ol className="mt-1 list-decimal pl-5 text-sm">
-          <li>Tap the Share button <span aria-hidden="true">⬆︎</span> in Safari.</li>
-          <li>Choose <strong>Add to Home Screen</strong>.</li>
-          <li>Open bdap from your home screen and turn on notifications.</li>
-        </ol>
-        <p className="hint mt-1">Needs iOS 16.4 or newer.</p>
+        <p className="font-bold text-plum">Install bdap to get notifications on this iPhone</p>
+        <p className="text-sm text-muted">
+          {iosSupportsPush()
+            ? "iPhone only allows notifications from apps on the home screen. Follow the steps under “App” above, open bdap from your home screen, then turn notifications on here."
+            : "Notifications need iOS 16.4 or newer. Update in Settings → General → Software Update, then install bdap using the steps under “App” above."}
+        </p>
       </>
     ) : state === "unsupported" ? (
       <p>This browser can&apos;t show push notifications. You&apos;ll still see everything in the bell.</p>
@@ -162,12 +116,7 @@ export function PushPrompt({ variant = "banner" }: { variant?: "banner" | "setti
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {state === "off" && <button type="button" className="btn btn-sm" disabled={busy} onClick={enable}>{busy ? "Turning on…" : "Turn on notifications"}</button>}
-        {state === "on" && variant === "settings" && (
-          <>
-            <button type="button" className="btn btn-sm" disabled={busy} onClick={sendTest}>{testing ? "Sending…" : "Send test notification"}</button>
-            <button type="button" className="btn-secondary btn-sm" disabled={busy} onClick={disable}>Turn off on this device</button>
-          </>
-        )}
+        {state === "on" && variant === "settings" && <button type="button" className="btn-secondary btn-sm" disabled={busy} onClick={disable}>Turn off on this device</button>}
         {variant === "banner" && (
           <button
             type="button"

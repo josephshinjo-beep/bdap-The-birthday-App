@@ -5,7 +5,7 @@
 // Hidden once installed (or when opened from the home screen), and for a week after "Not now".
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { dataMode } from "@/lib/data";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -51,6 +51,31 @@ export function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
+/**
+ * Where an iPhone user is viewing bdap. Only Safari, and Chrome/Edge/Firefox on iOS 16.4+, can
+ * add to the Home Screen; in-app browsers (Instagram, Facebook, Google app…) can't at all.
+ * WhatsApp and Messages open links in a Safari view that looks like Safari but can't either,
+ * which the steps mention because it can't be detected.
+ */
+export type IOSBrowser = "safari" | "other" | "in-app";
+
+export function iosBrowser(): IOSBrowser {
+  if (typeof navigator === "undefined") return "safari";
+  const ua = navigator.userAgent;
+  if (/FBAN|FBAV|Instagram|Line\/|Snapchat|LinkedInApp|Twitter|GSA\/|musical_ly|BytedanceWebview/i.test(ua)) return "in-app";
+  if (/CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo/i.test(ua)) return "other";
+  return "safari";
+}
+
+/** False on iOS older than 16.4, where web apps can't get notifications. Unknown counts as supported. */
+export function iosSupportsPush(): boolean {
+  if (typeof navigator === "undefined") return true;
+  const m = navigator.userAgent.match(/OS (\d+)[_.](\d+)/);
+  if (!m) return true; // iPad in desktop mode doesn't say; assume a current version
+  const [major, minor] = [Number(m[1]), Number(m[2])];
+  return major > 16 || (major === 16 && minor >= 4);
+}
+
 export type InstallMode = "prompt" | "ios" | "installed" | "unavailable";
 
 /** How this device can install bdap, plus a function that does it. */
@@ -87,27 +112,59 @@ function ShareIcon() {
   );
 }
 
-/** The step-by-step guide for iPhone and iPad. */
-export function IOSInstallSteps() {
+function Step({ n, children }: { n: number; children: ReactNode }) {
   return (
-    <ol className="flex flex-col gap-1.5 text-sm">
-      <li className="flex gap-2">
-        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-plum text-xs font-bold text-white">1</span>
-        <span>
-          Tap the <b>Share</b> button <ShareIcon /> in Safari (bottom of the screen, or top right on iPad).
-        </span>
-      </li>
-      <li className="flex gap-2">
-        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-plum text-xs font-bold text-white">2</span>
-        <span>
-          Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.
-        </span>
-      </li>
-      <li className="flex gap-2">
-        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-plum text-xs font-bold text-white">3</span>
-        <span>Open bdap from your home screen. That&apos;s also what turns on birthday notifications on iPhone.</span>
-      </li>
-    </ol>
+    <li className="flex gap-2">
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-plum text-xs font-bold text-white">{n}</span>
+      <span>{children}</span>
+    </li>
+  );
+}
+
+/** The step-by-step guide for iPhone and iPad, adapted to the browser it's open in. */
+export function IOSInstallSteps() {
+  const browser = iosBrowser();
+  const steps: ReactNode[] = [];
+  if (browser === "in-app") {
+    steps.push(
+      <>
+        This app&apos;s built-in browser can&apos;t install bdap. Tap <b>⋯</b> (or the compass icon) and choose <b>Open in Safari</b>, then
+        follow these steps there.
+      </>,
+    );
+  }
+  steps.push(
+    browser === "other" ? (
+      <>
+        Tap the <b>Share</b> button <ShareIcon /> (in Chrome and Edge it&apos;s in the address bar; in Firefox, open the <b>⋯</b> menu first).
+      </>
+    ) : (
+      <>
+        Tap the <b>Share</b> button <ShareIcon /> in Safari (bottom of the screen, or top right on iPad).
+      </>
+    ),
+    <>
+      Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.{" "}
+      <span className="text-muted">Not in the list? You&apos;re in WhatsApp&apos;s or Messages&apos; viewer: tap the Safari icon to open the page in Safari first.</span>
+    </>,
+    <>Open bdap from your home screen and turn on notifications on the Me page.</>,
+  );
+  return (
+    <div className="flex flex-col gap-2">
+      <ol className="flex flex-col gap-1.5 text-sm">
+        {steps.map((s, i) => (
+          <Step key={i} n={i + 1}>
+            {s}
+          </Step>
+        ))}
+      </ol>
+      {!iosSupportsPush() && (
+        <p className="rounded-[10px] bg-[var(--pill-sun-bg)] px-3 py-2 text-sm">
+          Birthday notifications need <b>iOS 16.4 or newer</b>. Update in <b>Settings → General → Software Update</b>; you can still add bdap
+          to your home screen now.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -158,9 +215,13 @@ export function InstallBanner() {
           <img src="/icons/192" alt="" width={48} height={48} className="h-12 w-12 shrink-0 rounded-[12px]" />
           <div className="min-w-0 flex-1">
             <p id="install-title" className="font-display text-lg font-extrabold leading-tight text-plum">
-              Get bdap on your home screen
+              {mode === "ios" ? "Install bdap to get birthday notifications" : "Get bdap on your home screen"}
             </p>
-            <p className="text-[13px] text-muted">Opens in one tap like a real app, and birthday reminders arrive on time. Free, no app store.</p>
+            <p className="text-[13px] text-muted">
+              {mode === "ios"
+                ? "On iPhone, notifications only work once bdap is on your home screen. Takes 10 seconds, no App Store."
+                : "Opens in one tap like a real app, and birthday reminders arrive on time. Free, no app store."}
+            </p>
           </div>
           <button type="button" onClick={dismiss} aria-label="Close" className="-mr-1 -mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-2">
             ✕
@@ -170,7 +231,7 @@ export function InstallBanner() {
         <div className="flex gap-2">
           {!showSteps && (
             <button type="button" className="btn btn-sm flex-1" onClick={onInstall}>
-              {mode === "ios" ? "Add to Home Screen" : "Install bdap"}
+              {mode === "ios" ? "Install app" : "Install bdap"}
             </button>
           )}
           <button type="button" className="btn-secondary btn-sm flex-1" onClick={dismiss}>

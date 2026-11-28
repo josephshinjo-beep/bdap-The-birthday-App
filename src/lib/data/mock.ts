@@ -1268,13 +1268,6 @@ export const mockApi: DataApi = {
   },
 
   async deletePushSubscription() {},
-
-  async sendTestPush() {
-    // No server in demo mode: show the notification locally through the service worker.
-    const reg = await navigator.serviceWorker.ready;
-    await reg.showNotification("Test notification", { body: "Demo mode: this one comes from your browser, not the server.", icon: "/icons/192", tag: "bdap-test" });
-    return { devices: 1, sent: 1, failed: 0, gone: 0 };
-  },
 };
 
 /** Lets pages re-render when the mock store changes (demo user switch etc.). */
