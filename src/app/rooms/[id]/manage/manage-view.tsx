@@ -237,6 +237,18 @@ function Manage({ room, session }: { room: Room; session: Session }) {
                       busy={busy === m.userId}
                       onRole={(role) => act(m.userId, () => data.setMemberRole(room.id, m.userId, role), `${m.fullName} is now ${roleLabel(role)}`)}
                       onRemove={() => act(m.userId, () => data.removeMember(room.id, m.userId), `${m.fullName} removed`)}
+                      onBirthday={(b) =>
+                        act(m.userId, () => data.setMemberBirthday(room.id, m.userId, b), b ? "Birthday saved" : "Birthday reset", () => {
+                          reloadMembers();
+                          reloadBirthdays();
+                        })
+                      }
+                      onStart={() =>
+                        act(m.userId, () => data.startBirthday(room.id, m.userId), `${m.fullName.split(" ")[0]}'s birthday started`, () => {
+                          reloadMembers();
+                          reloadBirthdays();
+                        })
+                      }
                     />
                   ))}
                 </ul>
@@ -477,6 +489,8 @@ function MemberRow({
   busy,
   onRole,
   onRemove,
+  onBirthday,
+  onStart,
 }: {
   m: Member;
   me: string;
@@ -484,8 +498,13 @@ function MemberRow({
   busy: boolean;
   onRole: (r: "co_moderator" | "class_rep" | "member") => void;
   onRemove: () => void;
+  onBirthday: (b: { month: number; day: number } | null) => void;
+  onStart: () => void;
 }) {
   const [confirm, setConfirm] = useState(false);
+  const [editing, setEditing] = useState(false);
+  // Admins can fix anyone's birthday in this room except their own (it's a surprise).
+  const canBirthday = m.userId !== me;
   const canRemove = m.userId !== me && m.role !== "moderator" && (m.role === "member" || m.role === "class_rep" || isModerator);
   const canRole = isModerator && m.userId !== me && m.role !== "moderator";
 
@@ -499,10 +518,27 @@ function MemberRow({
             {m.userId === me && " (you)"}
           </span>
           <small className="block truncate text-xs font-normal text-muted">
-            @{m.username} · {formatDayMonth(m.birthMonth, m.birthDay)} · {roleLabel(m.role)}
+            🎂 {formatDayMonth(m.birthMonth, m.birthDay)}
+            {m.birthdayEdited && (
+              <span title="Edited by an admin">
+                {" "}✎<span className="sr-only"> edited</span>
+              </span>
+            )}{" "}
+            · @{m.username} · {roleLabel(m.role)}
           </small>
         </div>
         <div className="flex gap-1">
+          {canBirthday && (
+            <button
+              type="button"
+              className={`btn-secondary btn-sm ${editing ? "!border-plum" : ""}`}
+              aria-expanded={editing}
+              aria-label={`Birthday for ${m.fullName}`}
+              onClick={() => setEditing((v) => !v)}
+            >
+              🎂
+            </button>
+          )}
           {canRole && (
             <>
               <label htmlFor={`role-${m.userId}`} className="sr-only">Role for {m.fullName}</label>
@@ -526,6 +562,20 @@ function MemberRow({
           )}
         </div>
       </div>
+      {editing && canBirthday && (
+        <BirthdayEditor
+          m={m}
+          busy={busy}
+          onSave={(b) => {
+            setEditing(false);
+            onBirthday(b);
+          }}
+          onStart={() => {
+            setEditing(false);
+            onStart();
+          }}
+        />
+      )}
       {confirm && (
         <div className="card card-danger mt-2 flex flex-wrap items-center gap-2">
           <span className="flex-1 text-[13px] font-bold">Remove {m.fullName} from the room?</span>
@@ -538,5 +588,93 @@ function MemberRow({
         </div>
       )}
     </li>
+  );
+}
+
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Day + month picker (no year) and "start today", for a member's birthday in this room. */
+function BirthdayEditor({
+  m,
+  busy,
+  onSave,
+  onStart,
+}: {
+  m: Member;
+  busy: boolean;
+  onSave: (b: { month: number; day: number } | null) => void;
+  onStart: () => void;
+}) {
+  const [month, setMonth] = useState(m.birthMonth);
+  const [day, setDay] = useState(m.birthDay);
+  const [confirmStart, setConfirmStart] = useState(false);
+  const daysInMonth = new Date(Date.UTC(2000, month, 0)).getUTCDate(); // 2000 is a leap year: 29 Feb is allowed
+  const first = m.fullName.split(" ")[0];
+  const changed = month !== m.birthMonth || day !== m.birthDay;
+
+  return (
+    <div className="mt-2 flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface-2 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor={`bday-d-${m.userId}`} className="sr-only">Day</label>
+        <select
+          id={`bday-d-${m.userId}`}
+          className="field !min-h-10 !w-auto !py-1.5 !pl-2 !pr-7 text-[13px] font-bold text-plum"
+          value={day}
+          disabled={busy}
+          onChange={(e) => setDay(Number(e.target.value))}
+        >
+          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
+        <label htmlFor={`bday-m-${m.userId}`} className="sr-only">Month</label>
+        <select
+          id={`bday-m-${m.userId}`}
+          className="field !min-h-10 !w-auto !py-1.5 !pl-2 !pr-7 text-[13px] font-bold text-plum"
+          value={month}
+          disabled={busy}
+          onChange={(e) => {
+            const next = Number(e.target.value);
+            setMonth(next);
+            setDay((d) => Math.min(d, new Date(Date.UTC(2000, next, 0)).getUTCDate()));
+          }}
+        >
+          {MONTH_NAMES.map((name, i) => (
+            <option key={name} value={i + 1}>{name}</option>
+          ))}
+        </select>
+        <button type="button" className="btn btn-sm" disabled={busy || !changed} onClick={() => onSave({ month, day })}>
+          Save
+        </button>
+        {m.birthdayEdited && (
+          <button type="button" className="btn-secondary btn-sm" disabled={busy} onClick={() => onSave(null)}>
+            Reset
+          </button>
+        )}
+      </div>
+      {!confirmStart ? (
+        <button type="button" className="btn-secondary btn-sm self-start" disabled={busy} onClick={() => setConfirmStart(true)}>
+          🎉 Start birthday today
+        </button>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex-1 text-[13px] font-bold">Start {first}&apos;s birthday today?</span>
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={busy}
+            onClick={() => {
+              setConfirmStart(false);
+              onStart();
+            }}
+          >
+            Start
+          </button>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => setConfirmStart(false)}>
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

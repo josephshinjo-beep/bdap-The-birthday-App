@@ -61,6 +61,10 @@ export interface DataApi {
   decideRequest(roomId: string, userId: string, approve: boolean): Promise<void>;
   setMemberRole(roomId: string, userId: string, role: Exclude<Role, "moderator">): Promise<void>;
   removeMember(roomId: string, userId: string): Promise<void>;
+  /** Admins: set a member's birthday for this room only (null restores their own date). Not for yourself. */
+  setMemberBirthday(roomId: string, userId: string, birthday: { month: number; day: number } | null): Promise<void>;
+  /** Admins: start a member's birthday celebration today, already approved. Not for yourself. */
+  startBirthday(roomId: string, userId: string): Promise<void>;
   /** Fires when the caller's membership in this room changes (approval). */
   onMembershipChange(roomId: string, cb: (status: MemberStatus) => void): Unsubscribe;
 

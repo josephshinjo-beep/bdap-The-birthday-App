@@ -303,7 +303,7 @@ Birthday reminders (a week before, the day before, on the day), the birthday wis
 ### 1. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In the **SQL editor**, run the ten files in `supabase/migrations/` in name order: `…_init.sql`, `…_hardening.sql`, `…_grants.sql`, `…_fix_upi_regex.sql`, `…_notification_kinds.sql`, `…_admin_controls.sql`, `…_lock_dob.sql`, `…_more_enum_values.sql`, `…_expenses_polls_wall.sql`, then `…_push_all_notifications.sql` (or use `supabase db push` with the Supabase CLI). This creates the tables, security rules and functions, turns on Realtime, and creates the `upi-qr` storage bucket.
+2. In the **SQL editor**, run the eleven files in `supabase/migrations/` in name order: `…_init.sql`, `…_hardening.sql`, `…_grants.sql`, `…_fix_upi_regex.sql`, `…_notification_kinds.sql`, `…_admin_controls.sql`, `…_lock_dob.sql`, `…_more_enum_values.sql`, `…_expenses_polls_wall.sql`, `…_push_all_notifications.sql`, then `…_admin_birthday_controls.sql` (or use `supabase db push` with the Supabase CLI). This creates the tables, security rules and functions, turns on Realtime, and creates the `upi-qr` storage bucket.
 3. **Authentication → Providers → Google:** turn it on and paste a Google OAuth client ID and secret (from Google Cloud Console → APIs & Services → Credentials). In Google Cloud, add Supabase's callback URL (shown on that Supabase screen) as an authorised redirect URI.
 4. **Authentication → URL configuration:** set the Site URL to `https://bdap.surf`, and add these redirect URLs:
    - `https://bdap.surf/auth/callback`

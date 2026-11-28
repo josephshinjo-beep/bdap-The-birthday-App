@@ -75,6 +75,8 @@ interface StoredMembership {
   role: Role;
   status: MemberStatus;
   requestedAt: string;
+  /** Set by an admin for this room only; overrides the profile's month and day. */
+  roomBirthday?: { month: number; day: number };
 }
 interface StoredUpi extends UpiAccount {
   roomId: string;
@@ -141,6 +143,8 @@ interface Store {
   expenses: StoredExpense[];
   expensePayments: { expenseId: string; userId: string; amount: number | null; paidAt: string | null; recordedBy: string | null }[];
   wishes: StoredWish[];
+  /** Birthdays an admin started by hand (optional: older saved demos don't have it). */
+  started?: { roomId: string; userId: string; date: string }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -468,11 +472,14 @@ function roomCelebrations(store: Store, roomId: string, days = DECISION_WINDOW_D
     .flatMap((m) => {
       const p = store.profiles.find((x) => x.id === m.userId);
       if (!p) return [];
-      const { month, day } = parseISODate(p.dob);
-      const date = nextBirthday(month, day, today);
-      if (date > limit) return [];
+      const { month, day } = m.roomBirthday ?? parseISODate(p.dob);
+      const auto = nextBirthday(month, day, today);
+      // Birthdays an admin started by hand, plus the usual one from their date.
+      const dates = new Set((store.started ?? []).filter((s) => s.roomId === roomId && s.userId === p.id && s.date >= today).map((s) => s.date));
+      if (auto <= limit) dates.add(auto);
+      return [...dates].map((date) => {
       const id = celebrationId(roomId, p.id, date);
-      return [{
+      return {
         id,
         roomId,
         birthdayUserId: p.id,
@@ -484,7 +491,8 @@ function roomCelebrations(store: Store, roomId: string, days = DECISION_WINDOW_D
         totalExpense: store.celDetails[id]?.totalExpense ?? null,
         plan: store.celDetails[id]?.plan ?? null,
         splitAmount: splitAmount(store.celDetails[id]?.totalExpense, memberCount(store, roomId) - 1),
-      } satisfies Celebration];
+      } satisfies Celebration;
+      });
     })
     .sort((a, b) => a.date.localeCompare(b.date));
 }
@@ -704,8 +712,8 @@ export const mockApi: DataApi = {
         .filter((m) => m.roomId === roomId && (m.status === "approved" || (admin && m.status === "pending")))
         .map((m): Member => {
           const p = store.profiles.find((x) => x.id === m.userId)!;
-          const { month, day } = parseISODate(p.dob);
-          return { userId: p.id, fullName: p.fullName, username: p.username, avatarUrl: p.avatarUrl, birthMonth: month, birthDay: day, role: m.role, status: m.status, requestedAt: m.requestedAt };
+          const { month, day } = m.roomBirthday ?? parseISODate(p.dob);
+          return { userId: p.id, fullName: p.fullName, username: p.username, avatarUrl: p.avatarUrl, birthMonth: month, birthDay: day, birthdayEdited: Boolean(m.roomBirthday), role: m.role, status: m.status, requestedAt: m.requestedAt };
         })
         .sort((a, b) => a.status.localeCompare(b.status) || a.fullName.localeCompare(b.fullName)),
       80,
@@ -744,6 +752,37 @@ export const mockApi: DataApi = {
     const m = membership(store, roomId, userId);
     if (!m || m.role === "moderator" || (m.role === "co_moderator" && !isModerator(store, roomId, me))) throw new DataError("not_allowed");
     store.memberships = store.memberships.filter((x) => x !== m);
+    persist(store);
+  },
+
+  async setMemberBirthday(roomId, userId, birthday) {
+    const me = requireUser();
+    const store = load();
+    if (!isAdmin(store, roomId, me) || userId === me) throw new DataError("not_allowed");
+    const m = membership(store, roomId, userId);
+    if (!m || m.status !== "approved") throw new DataError("not_found");
+    if (birthday) {
+      const { month, day } = birthday;
+      const valid = Number.isInteger(month) && Number.isInteger(day) && month >= 1 && month <= 12 && day >= 1 && day <= new Date(Date.UTC(2000, month, 0)).getUTCDate();
+      if (!valid) throw new DataError("invalid_input", "That date doesn't exist.");
+      m.roomBirthday = { month, day };
+    } else {
+      delete m.roomBirthday;
+    }
+    runReminders(store);
+    persist(store);
+  },
+
+  async startBirthday(roomId, userId) {
+    const me = requireUser();
+    const store = load();
+    if (!isAdmin(store, roomId, me) || userId === me) throw new DataError("not_allowed");
+    const m = membership(store, roomId, userId);
+    if (!m || m.status !== "approved") throw new DataError("not_found");
+    const date = todayIST();
+    store.started = [...(store.started ?? []).filter((s) => !(s.roomId === roomId && s.userId === userId && s.date === date)), { roomId, userId, date }];
+    store.decisions[celebrationId(roomId, userId, date)] = "celebrate";
+    runReminders(store);
     persist(store);
   },
 
@@ -1230,11 +1269,14 @@ export const mockApi: DataApi = {
       const p = store.profiles.find((x) => x.id === me);
       const room = store.rooms.find((r) => r.id === m.roomId);
       if (!p || !room) continue;
-      const { month, day } = parseISODate(p.dob);
-      const date = birthdayInYear(month, day, Number(today.slice(0, 4)));
-      if (date > today || daysBetween(date, today) > 30) continue;
-      const id = celebrationId(room.id, me, date);
-      out.push({ celebrationId: id, roomId: room.id, roomName: room.name, date, wishCount: store.wishes.filter((w) => w.celebrationId === id).length });
+      const { month, day } = m.roomBirthday ?? parseISODate(p.dob);
+      const dates = new Set([birthdayInYear(month, day, Number(today.slice(0, 4)))]);
+      for (const s of store.started ?? []) if (s.roomId === room.id && s.userId === me) dates.add(s.date);
+      for (const date of dates) {
+        if (date > today || daysBetween(date, today) > 30) continue;
+        const id = celebrationId(room.id, me, date);
+        out.push({ celebrationId: id, roomId: room.id, roomName: room.name, date, wishCount: store.wishes.filter((w) => w.celebrationId === id).length });
+      }
     }
     return out;
   },

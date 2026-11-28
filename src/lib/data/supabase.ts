@@ -51,7 +51,7 @@ async function uid(): Promise<string> {
 function toMember(r: Row): Member {
   return {
     userId: r.user_id, fullName: r.full_name, username: r.username, avatarUrl: r.avatar_url,
-    birthMonth: r.birth_month, birthDay: r.birth_day, role: r.role, status: r.status, requestedAt: r.requested_at,
+    birthMonth: r.birth_month, birthDay: r.birth_day, birthdayEdited: Boolean(r.birthday_edited), role: r.role, status: r.status, requestedAt: r.requested_at,
   };
 }
 
@@ -273,6 +273,16 @@ export const supabaseApi: DataApi = {
 
   async removeMember(roomId, userId) {
     const { error } = await sb().rpc("remove_member", { p_room: roomId, p_user: userId });
+    if (error) fail(error);
+  },
+
+  async setMemberBirthday(roomId, userId, birthday) {
+    const { error } = await sb().rpc("set_member_birthday", { p_room: roomId, p_user: userId, p_month: birthday?.month ?? null, p_day: birthday?.day ?? null });
+    if (error) fail(error);
+  },
+
+  async startBirthday(roomId, userId) {
+    const { error } = await sb().rpc("start_birthday", { p_room: roomId, p_user: userId });
     if (error) fail(error);
   },
 

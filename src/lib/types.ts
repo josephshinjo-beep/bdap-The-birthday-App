@@ -109,6 +109,8 @@ export interface Member {
   avatarUrl: string | null;
   birthMonth: number;
   birthDay: number;
+  /** An admin set this member's birthday for this room (it differs from their profile). */
+  birthdayEdited: boolean;
   role: Role;
   status: MemberStatus;
   requestedAt: string;
