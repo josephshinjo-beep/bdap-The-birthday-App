@@ -9,6 +9,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Vercel restores .next/cache between deploys; a warm Turbopack build cache shipped a
+    // stale globals.css (new rules missing on the live site). Builds take seconds, so skip it.
+    turbopackFileSystemCacheForBuild: false,
+  },
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
