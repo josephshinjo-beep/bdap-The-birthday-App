@@ -22,21 +22,55 @@ export function isAllowedPushEndpoint(endpoint: string): boolean {
   }
 }
 
+/** Env values pasted into a dashboard often carry stray whitespace or quotes. */
+export function cleanEnv(value: string | undefined): string {
+  return (value ?? "").trim().replace(/^(["'])(.*)\1$/, "$2").trim();
+}
+
 let configured = false;
+let problem: string | null = null;
+
 function configure(): boolean {
   if (configured) return true;
-  const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const priv = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT ?? "mailto:admin@example.com";
-  if (!pub || !priv) return false;
-  webpush.setVapidDetails(subject, pub, priv);
+  const pub = cleanEnv(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+  const priv = cleanEnv(process.env.VAPID_PRIVATE_KEY);
+  let subject = cleanEnv(process.env.VAPID_SUBJECT) || "mailto:admin@example.com";
+  // A bare email address is the most common mistake; web-push needs mailto: or https:.
+  if (/^[^\s:@]+@[^\s@]+$/.test(subject)) subject = `mailto:${subject}`;
+  if (!pub || !priv) {
+    problem = !pub ? "NEXT_PUBLIC_VAPID_PUBLIC_KEY is not set in Vercel." : "VAPID_PRIVATE_KEY is not set in Vercel.";
+    return false;
+  }
+  try {
+    webpush.setVapidDetails(subject, pub, priv);
+  } catch (err) {
+    problem = describeVapidError(err);
+    console.error("web-push VAPID settings rejected:", problem);
+    return false;
+  }
   configured = true;
+  problem = null;
   return true;
 }
 
-/** True when both VAPID keys are set on the server, so pushes can actually be sent. */
+// web-push's messages can echo the subject, so map them to a description that names the
+// setting without repeating its value.
+function describeVapidError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (/subject/i.test(msg)) return "VAPID_SUBJECT must be like mailto:you@example.com or an https:// address.";
+  if (/public key/i.test(msg)) return "NEXT_PUBLIC_VAPID_PUBLIC_KEY isn't a valid VAPID public key. Copy the public key from `npx web-push generate-vapid-keys` again.";
+  if (/private key/i.test(msg)) return "VAPID_PRIVATE_KEY isn't a valid VAPID private key. Copy the private key from the same key pair again.";
+  return "The VAPID settings in Vercel were rejected.";
+}
+
+/** True when both VAPID keys are set and valid on the server, so pushes can actually be sent. */
 export function isPushConfigured(): boolean {
   return configure();
+}
+
+/** Why push can't be sent, naming the setting to fix (never its value); null when it can. */
+export function pushConfigProblem(): string | null {
+  return configure() ? null : problem;
 }
 
 export interface StoredSubscription {

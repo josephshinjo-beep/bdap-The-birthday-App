@@ -5,7 +5,7 @@
 // Vercel Cron (vercel.json) is a once-a-day fallback.
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
-import { sendPushes, type StoredSubscription } from "@/lib/push";
+import { pushConfigProblem, sendPushes, type StoredSubscription } from "@/lib/push";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
 function authorized(request: NextRequest): boolean {
@@ -55,7 +55,10 @@ async function run(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, at: at.toISOString(), notifications: created.length, push });
+  // Reported on every run, so a bad VAPID setting shows up before a reminder is actually due.
+  const pushProblem = pushConfigProblem();
+  if (pushProblem && created.length > 0) console.error("reminders created but not pushed:", pushProblem);
+  return NextResponse.json({ ok: true, at: at.toISOString(), notifications: created.length, push, ...(pushProblem ? { pushProblem } : {}) });
 }
 
 export const POST = run;

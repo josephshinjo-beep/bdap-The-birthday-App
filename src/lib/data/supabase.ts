@@ -603,7 +603,8 @@ export const supabaseApi: DataApi = {
     if (res.ok) return (await res.json()) as TestPushResult;
     if (res.status === 401) throw new DataError("not_signed_in", "Sign in again, then retry.");
     if (res.status === 429) throw new DataError("invalid_input", "Wait a few seconds before sending another test.");
-    if (res.status === 503) throw new DataError("unknown", "Push isn't set up on the server yet: the VAPID keys are missing in Vercel.");
-    throw new DataError("unknown", "Couldn't send the test notification. Try again in a minute.");
+    const reason = await res.json().then((b: { error?: unknown }) => (typeof b?.error === "string" ? b.error : ""), () => "");
+    if (res.status === 503) throw new DataError("unknown", `Push isn't set up correctly on the server. ${reason}`.trim());
+    throw new DataError("unknown", `Couldn't send the test notification (server error ${res.status}). Try again in a minute.`);
   },
 };

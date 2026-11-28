@@ -2,7 +2,7 @@
 // check that notifications reach this phone or browser. It only ever looks up
 // subscriptions that belong to the caller, so it can't be used to message anyone else.
 import { NextResponse, type NextRequest } from "next/server";
-import { isPushConfigured, sendPushes } from "@/lib/push";
+import { pushConfigProblem, sendPushes } from "@/lib/push";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { hasSupabase } from "@/lib/supabase/env";
 import { getServerSupabase } from "@/lib/supabase/server";
@@ -13,15 +13,23 @@ const COOLDOWN_MS = 15_000;
 const lastSent = new Map<string, number>();
 
 export async function POST(request: NextRequest) {
+  try {
+    return await handle(request);
+  } catch (err) {
+    console.error("push test failed", err instanceof Error ? err.message : err);
+    return NextResponse.json({ error: "server error" }, { status: 500 });
+  }
+}
+
+async function handle(request: NextRequest) {
   if (!hasSupabase) return NextResponse.json({ error: "not signed in" }, { status: 401 });
   const supabase = await getServerSupabase();
   const { data: auth } = await supabase.auth.getUser();
   const user = auth.user;
   if (!user) return NextResponse.json({ error: "not signed in" }, { status: 401 });
 
-  if (!isPushConfigured()) {
-    return NextResponse.json({ error: "push is not configured on the server", code: "not_configured" }, { status: 503 });
-  }
+  const problem = pushConfigProblem();
+  if (problem) return NextResponse.json({ error: problem, code: "not_configured" }, { status: 503 });
 
   const text = await request.text();
   if (text.length > MAX_BODY) return NextResponse.json({ error: "bad request" }, { status: 400 });

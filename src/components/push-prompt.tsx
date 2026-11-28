@@ -4,7 +4,8 @@ import { data } from "@/lib/data";
 
 type PushState = "loading" | "unsupported" | "ios-install" | "denied" | "off" | "on";
 
-const VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+// Trim stray spaces or quotes pasted into the dashboard (the server does the same).
+const VAPID = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "").trim().replace(/^(["'])(.*)\1$/, "$2").trim();
 const DISMISS_KEY = "bdap-push-dismissed";
 
 function base64ToBytes(base64: string) {
