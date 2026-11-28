@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { data } from "@/lib/data";
 import { isIOS, isStandalone } from "@/components/install-prompt";
+import { LiquidSwitch } from "@/components/liquid-switch";
 
 type PushState = "loading" | "unsupported" | "ios-install" | "denied" | "off" | "on";
 
@@ -31,6 +32,7 @@ export function PushPrompt({ variant = "banner" }: { variant?: "banner" | "setti
   const [state, setState] = useState<PushState>("loading");
   const [dismissed, setDismissed] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [target, setTarget] = useState<boolean | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -85,6 +87,31 @@ export function PushPrompt({ variant = "banner" }: { variant?: "banner" | "setti
   // On iPhone the app-wide install banner already asks people to install first, so don't add a second prompt.
   if (variant === "banner" && (dismissed || state === "on" || state === "unsupported" || state === "denied" || state === "ios-install")) return null;
 
+  if (variant === "settings" && (state === "on" || state === "off")) {
+    const on = target ?? state === "on";
+    return (
+      <div className="card flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-plum">Birthday notifications</p>
+            <p className={`text-sm font-bold ${on ? "text-ok" : "text-muted"}`}>{on ? "On" : "Off"}</p>
+          </div>
+          <LiquidSwitch
+            checked={on}
+            busy={busy}
+            label="Birthday notifications"
+            onChange={(next) => {
+              // Show the new position while the permission prompt is open; snap back if it fails.
+              setTarget(next);
+              void (next ? enable() : disable()).finally(() => setTarget(null));
+            }}
+          />
+        </div>
+        {msg && <p className="text-sm" role="status">{msg}</p>}
+      </div>
+    );
+  }
+
   const body =
     state === "ios-install" ? (
       <p className="font-bold text-plum">Install bdap first (see App above)</p>
@@ -104,10 +131,9 @@ export function PushPrompt({ variant = "banner" }: { variant?: "banner" | "setti
         <span aria-hidden="true" className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[9px] bg-plum font-display text-[13px] font-extrabold text-white">bd</span>
         <div className="min-w-0 flex-1">{body}</div>
       </div>
-      {(state === "off" || (state === "on" && variant === "settings") || variant === "banner") && (
+      {(state === "off" || variant === "banner") && (
         <div className="mt-3 flex flex-wrap gap-2">
         {state === "off" && <button type="button" className="btn btn-sm" disabled={busy} onClick={enable}>{busy ? "Turning on…" : "Turn on notifications"}</button>}
-        {state === "on" && variant === "settings" && <button type="button" className="btn-secondary btn-sm" disabled={busy} onClick={disable}>Turn off on this device</button>}
         {variant === "banner" && (
           <button
             type="button"
