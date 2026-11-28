@@ -230,9 +230,7 @@ export function InstallCard() {
   const [steps, setSteps] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  if (mode === "installed") {
-    return <p className="card text-sm font-bold text-ok">✓ bdap is installed on this device.</p>;
-  }
+  if (mode === "installed") return null;
   return (
     <div className="card flex flex-col gap-3">
       <p className="text-sm font-bold text-plum">Install bdap</p>

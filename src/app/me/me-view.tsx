@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
 import { ProfileForm } from "@/components/profile-form";
 import { useSession } from "@/components/providers";
-import { InstallCard } from "@/components/install-prompt";
+import { InstallCard, useInstall } from "@/components/install-prompt";
 import { PushPrompt } from "@/components/push-prompt";
 import { Avatar, BackLink, Page } from "@/components/ui";
 import { data } from "@/lib/data";
@@ -31,10 +31,7 @@ function Me({ session }: { session: Session }) {
         </div>
       </div>
 
-      <section aria-labelledby="install" className="flex flex-col gap-2">
-        <h2 id="install" className="label">App</h2>
-        <InstallCard />
-      </section>
+      <InstallSection />
 
       <section aria-labelledby="notif" className="flex flex-col gap-2">
         <h2 id="notif" className="label">Notifications</h2>
@@ -69,5 +66,17 @@ function Me({ session }: { session: Session }) {
         Log out
       </button>
     </Page>
+  );
+}
+
+/** "App" section: nothing at all once bdap is installed on this device. */
+function InstallSection() {
+  const { mode } = useInstall();
+  if (mode === "installed") return null;
+  return (
+    <section aria-labelledby="install" className="flex flex-col gap-2">
+      <h2 id="install" className="label">App</h2>
+      <InstallCard />
+    </section>
   );
 }
