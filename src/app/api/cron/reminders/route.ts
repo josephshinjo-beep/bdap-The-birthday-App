@@ -2,23 +2,19 @@
 // `Authorization: Bearer $CRON_SECRET`. Each room picks its own reminder
 // times, so every run sends whatever has become due (see src/lib/reminders.ts
 // and prepare_due_reminders()). Running twice never sends twice.
+// It also pushes any other notification from the last hour that hasn't been
+// pushed yet, as a safety net for /api/push/dispatch.
 // Vercel Cron (vercel.json) is a once-a-day fallback.
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
-import { pushConfigProblem, sendPushes, type StoredSubscription } from "@/lib/push";
+import { hasCronSecret } from "@/lib/cron-auth";
+import { pushConfigProblem } from "@/lib/push";
+import { dispatchPendingPushes, pushNotifications, type DispatchResult, type PendingPush } from "@/lib/push-dispatch";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
-function authorized(request: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || secret.length < 16) return false;
-  const header = request.headers.get("authorization") ?? "";
-  const a = Buffer.from(header);
-  const b = Buffer.from(`Bearer ${secret}`);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
+const SWEEP_WINDOW_MS = 60 * 60 * 1000;
 
 async function run(request: NextRequest) {
-  if (!authorized(request)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!hasCronSecret(request)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   // ?at=2026-11-26T18:05:00+05:30 rehearses a moment in time (still needs the secret).
   const atParam = request.nextUrl.searchParams.get("at");
@@ -31,34 +27,34 @@ async function run(request: NextRequest) {
     console.error("prepare_due_reminders failed", error.message);
     return NextResponse.json({ error: "prepare_due_reminders failed" }, { status: 500 });
   }
-  const created = (data ?? []) as { notification_id: string; user_id: string; title: string; body: string; url: string; priority: boolean }[];
-
-  let push = { sent: 0, failed: 0, gone: 0 };
-  if (created.length > 0) {
-    const userIds = [...new Set(created.map((n) => n.user_id))];
-    const subsByUser = new Map<string, StoredSubscription[]>();
-    for (let i = 0; i < userIds.length; i += 200) {
-      const { data: subs } = await admin.from("push_subscriptions").select("user_id, endpoint, p256dh, auth").in("user_id", userIds.slice(i, i + 200));
-      for (const s of subs ?? []) subsByUser.set(s.user_id, [...(subsByUser.get(s.user_id) ?? []), s]);
-    }
-
-    const items = created.flatMap((n) =>
-      (subsByUser.get(n.user_id) ?? []).map((sub) => ({ sub, payload: { title: n.title, body: n.body, url: n.url, tag: n.notification_id, priority: n.priority } })),
-    );
-    const result = await sendPushes(items);
-    push = { sent: result.sent, failed: result.failed, gone: result.gone.length };
-
-    if (result.gone.length) await admin.from("push_subscriptions").delete().in("endpoint", result.gone);
-    const ids = created.map((n) => n.notification_id);
-    for (let i = 0; i < ids.length; i += 500) {
-      await admin.from("notifications").update({ pushed_at: new Date().toISOString() }).in("id", ids.slice(i, i + 500));
-    }
-  }
+  const created = (data ?? []) as PendingPush[];
 
   // Reported on every run, so a bad VAPID setting shows up before a reminder is actually due.
   const pushProblem = pushConfigProblem();
-  if (pushProblem && created.length > 0) console.error("reminders created but not pushed:", pushProblem);
-  return NextResponse.json({ ok: true, at: at.toISOString(), notifications: created.length, push, ...(pushProblem ? { pushProblem } : {}) });
+  let push: DispatchResult = { notifications: 0, sent: 0, failed: 0, gone: 0 };
+  if (pushProblem) {
+    if (created.length > 0) console.error("reminders created but not pushed:", pushProblem);
+  } else {
+    const swept = await dispatchPendingPushes(admin, new Date(Date.now() - SWEEP_WINDOW_MS));
+    if (swept) {
+      push = swept;
+    } else {
+      // Before the push_all_notifications migration: push only what this run created.
+      push = await pushNotifications(admin, created);
+      const ids = created.map((n) => n.notification_id);
+      for (let i = 0; i < ids.length; i += 500) {
+        await admin.from("notifications").update({ pushed_at: new Date().toISOString() }).in("id", ids.slice(i, i + 500));
+      }
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    at: at.toISOString(),
+    notifications: created.length,
+    push: { pushed: push.notifications, sent: push.sent, failed: push.failed, gone: push.gone },
+    ...(pushProblem ? { pushProblem } : {}),
+  });
 }
 
 export const POST = run;

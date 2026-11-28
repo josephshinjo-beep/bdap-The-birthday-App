@@ -117,7 +117,7 @@ Each room's moderator and co-moderators get a dashboard to run it:
 | Framework | [Next.js 16](https://nextjs.org) (App Router, TypeScript, Cache Components) |
 | Styling | Tailwind CSS v4, with every colour and font in one theme file |
 | Backend | [Supabase](https://supabase.com): Postgres, Auth (Google), Realtime, Storage |
-| Notifications | Web Push (VAPID) through a service worker |
+| Notifications | Web Push (VAPID) through a service worker; every notification is pushed within seconds by a database trigger that calls `/api/push/dispatch` |
 | Scheduling | Supabase `pg_cron` + `pg_net`, with Vercel Cron as a fallback |
 | Hosting | Vercel, with DNS on Cloudflare |
 | Tests | Vitest |
@@ -303,7 +303,7 @@ Birthday reminders (a week before, the day before, on the day), the birthday wis
 ### 1. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In the **SQL editor**, run the nine files in `supabase/migrations/` in name order: `…_init.sql`, `…_hardening.sql`, `…_grants.sql`, `…_fix_upi_regex.sql`, `…_notification_kinds.sql`, `…_admin_controls.sql`, `…_lock_dob.sql`, `…_more_enum_values.sql`, then `…_expenses_polls_wall.sql` (or use `supabase db push` with the Supabase CLI). This creates the tables, security rules and functions, turns on Realtime, and creates the `upi-qr` storage bucket.
+2. In the **SQL editor**, run the ten files in `supabase/migrations/` in name order: `…_init.sql`, `…_hardening.sql`, `…_grants.sql`, `…_fix_upi_regex.sql`, `…_notification_kinds.sql`, `…_admin_controls.sql`, `…_lock_dob.sql`, `…_more_enum_values.sql`, `…_expenses_polls_wall.sql`, then `…_push_all_notifications.sql` (or use `supabase db push` with the Supabase CLI). This creates the tables, security rules and functions, turns on Realtime, and creates the `upi-qr` storage bucket.
 3. **Authentication → Providers → Google:** turn it on and paste a Google OAuth client ID and secret (from Google Cloud Console → APIs & Services → Credentials). In Google Cloud, add Supabase's callback URL (shown on that Supabase screen) as an authorised redirect URI.
 4. **Authentication → URL configuration:** set the Site URL to `https://bdap.surf`, and add these redirect URLs:
    - `https://bdap.surf/auth/callback`
@@ -452,6 +452,7 @@ Ideas for after launch (the owner picks):
 | The app shows demo data in production | `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` is missing in Vercel. Redeploy after adding them. |
 | No push on iPhone | Install it first (Share → Add to Home Screen, iOS 16.4+), then turn notifications on from inside the installed app. |
 | "Notifications allowed" but nothing arrives | The VAPID keys aren't set on the server. |
+| The test push works, but other notifications (join requests, expenses, polls) only show in the bell | Run `supabase/migrations/20261129000000_push_all_notifications.sql` in the SQL editor. It needs `pg_net` and the two Vault secrets from `supabase/cron.sql`. Until then only birthday reminders are pushed. |
 | Is push working on my phone? | Open **Me → Notifications → Send test notification**. It pushes only to that device and says what went wrong: VAPID keys missing, keys not a matching pair, or the device registration expired. |
 | The cron route returns 401 | The `Authorization: Bearer …` value doesn't match `CRON_SECRET`, or the secret is shorter than 16 characters. |
 | Reminders never run | Check `select * from cron.job_run_details order by start_time desc limit 10;` and `select * from net._http_response order by created desc limit 10;` in Supabase. |
