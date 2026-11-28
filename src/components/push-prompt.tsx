@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { data } from "@/lib/data";
-import { isIOS, isStandalone, iosSupportsPush } from "@/components/install-prompt";
+import { isIOS, isStandalone } from "@/components/install-prompt";
 
 type PushState = "loading" | "unsupported" | "ios-install" | "denied" | "off" | "on";
 
@@ -87,25 +87,15 @@ export function PushPrompt({ variant = "banner" }: { variant?: "banner" | "setti
 
   const body =
     state === "ios-install" ? (
-      <>
-        <p className="font-bold text-plum">Install bdap to get notifications on this iPhone</p>
-        <p className="text-sm text-muted">
-          {iosSupportsPush()
-            ? "iPhone only allows notifications from apps on the home screen. Follow the steps under “App” above, open bdap from your home screen, then turn notifications on here."
-            : "Notifications need iOS 16.4 or newer. Update in Settings → General → Software Update, then install bdap using the steps under “App” above."}
-        </p>
-      </>
+      <p className="font-bold text-plum">Install bdap first (see App above)</p>
     ) : state === "unsupported" ? (
-      <p>This browser can&apos;t show push notifications. You&apos;ll still see everything in the bell.</p>
+      <p>Not supported in this browser</p>
     ) : state === "denied" ? (
-      <p>Notifications are blocked for bdap. Turn them on in your browser&apos;s site settings, then come back.</p>
+      <p>Blocked. Allow notifications in browser settings.</p>
     ) : state === "on" ? (
-      <p className="font-bold text-ok">✓ Push notifications are on for this device.</p>
+      <p className="font-bold text-ok">✓ Notifications on</p>
     ) : (
-      <>
-        <p className="font-bold text-plum">Want a nudge the evening before a birthday?</p>
-        <p className="text-sm text-muted">We only send secret birthday heads-ups and room updates.</p>
-      </>
+      <p className="font-bold text-plum">Get birthday notifications</p>
     );
 
   return (
@@ -114,7 +104,8 @@ export function PushPrompt({ variant = "banner" }: { variant?: "banner" | "setti
         <span aria-hidden="true" className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[9px] bg-plum font-display text-[13px] font-extrabold text-white">bd</span>
         <div className="min-w-0 flex-1">{body}</div>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2">
+      {(state === "off" || (state === "on" && variant === "settings") || variant === "banner") && (
+        <div className="mt-3 flex flex-wrap gap-2">
         {state === "off" && <button type="button" className="btn btn-sm" disabled={busy} onClick={enable}>{busy ? "Turning on…" : "Turn on notifications"}</button>}
         {state === "on" && variant === "settings" && <button type="button" className="btn-secondary btn-sm" disabled={busy} onClick={disable}>Turn off on this device</button>}
         {variant === "banner" && (
@@ -129,7 +120,8 @@ export function PushPrompt({ variant = "banner" }: { variant?: "banner" | "setti
             Not now
           </button>
         )}
-      </div>
+        </div>
+      )}
       {msg && <p className="mt-2 text-sm" role="status">{msg}</p>}
     </div>
   );

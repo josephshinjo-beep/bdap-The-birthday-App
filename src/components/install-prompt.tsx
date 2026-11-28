@@ -125,29 +125,15 @@ function Step({ n, children }: { n: number; children: ReactNode }) {
 export function IOSInstallSteps() {
   const browser = iosBrowser();
   const steps: ReactNode[] = [];
-  if (browser === "in-app") {
-    steps.push(
-      <>
-        This app&apos;s built-in browser can&apos;t install bdap. Tap <b>⋯</b> (or the compass icon) and choose <b>Open in Safari</b>, then
-        follow these steps there.
-      </>,
-    );
-  }
+  if (browser === "in-app") steps.push(<>Open in <b>Safari</b></>);
   steps.push(
-    browser === "other" ? (
-      <>
-        Tap the <b>Share</b> button <ShareIcon /> (in Chrome and Edge it&apos;s in the address bar; in Firefox, open the <b>⋯</b> menu first).
-      </>
-    ) : (
-      <>
-        Tap the <b>Share</b> button <ShareIcon /> in Safari (bottom of the screen, or top right on iPad).
-      </>
-    ),
     <>
-      Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.{" "}
-      <span className="text-muted">Not in the list? You&apos;re in WhatsApp&apos;s or Messages&apos; viewer: tap the Safari icon to open the page in Safari first.</span>
+      Tap <b>Share</b> <ShareIcon />
     </>,
-    <>Open bdap from your home screen and turn on notifications on the Me page.</>,
+    <>
+      Tap <b>Add to Home Screen</b>
+    </>,
+    <>Open bdap from your home screen</>,
   );
   return (
     <div className="flex flex-col gap-2">
@@ -160,8 +146,7 @@ export function IOSInstallSteps() {
       </ol>
       {!iosSupportsPush() && (
         <p className="rounded-[10px] bg-[var(--pill-sun-bg)] px-3 py-2 text-sm">
-          Birthday notifications need <b>iOS 16.4 or newer</b>. Update in <b>Settings → General → Software Update</b>; you can still add bdap
-          to your home screen now.
+          Notifications need <b>iOS 16.4+</b>
         </p>
       )}
     </div>
@@ -215,13 +200,9 @@ export function InstallBanner() {
           <img src="/icons/192" alt="" width={48} height={48} className="h-12 w-12 shrink-0 rounded-[12px]" />
           <div className="min-w-0 flex-1">
             <p id="install-title" className="font-display text-lg font-extrabold leading-tight text-plum">
-              {mode === "ios" ? "Install bdap to get birthday notifications" : "Get bdap on your home screen"}
+              Install bdap
             </p>
-            <p className="text-[13px] text-muted">
-              {mode === "ios"
-                ? "On iPhone, notifications only work once bdap is on your home screen. Takes 10 seconds, no App Store."
-                : "Opens in one tap like a real app, and birthday reminders arrive on time. Free, no app store."}
-            </p>
+            <p className="text-[13px] text-muted">Get birthday notifications</p>
           </div>
           <button type="button" onClick={dismiss} aria-label="Close" className="-mr-1 -mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-2">
             ✕
@@ -231,7 +212,7 @@ export function InstallBanner() {
         <div className="flex gap-2">
           {!showSteps && (
             <button type="button" className="btn btn-sm flex-1" onClick={onInstall}>
-              {mode === "ios" ? "Install app" : "Install bdap"}
+              Install app
             </button>
           )}
           <button type="button" className="btn-secondary btn-sm flex-1" onClick={dismiss}>
@@ -254,9 +235,7 @@ export function InstallCard() {
   }
   return (
     <div className="card flex flex-col gap-3">
-      <p className="text-sm">
-        <b className="text-plum">Install bdap</b> to open it in one tap from your home screen and get reminders like a real app.
-      </p>
+      <p className="text-sm font-bold text-plum">Install bdap</p>
       {mode === "ios" && <IOSInstallSteps />}
       {mode === "prompt" && (
         <button
@@ -264,22 +243,22 @@ export function InstallCard() {
           className="btn btn-sm self-start"
           onClick={async () => {
             const r = await install();
-            setMsg(r === "accepted" ? "Installed! Look for bdap on your home screen." : null);
+            setMsg(r === "accepted" ? "Installed" : null);
           }}
         >
-          Install bdap
+          Install app
         </button>
       )}
       {mode === "unavailable" && (
         <>
           {!steps && (
             <button type="button" className="btn-secondary btn-sm self-start" onClick={() => setSteps(true)}>
-              How do I install it?
+              How to install
             </button>
           )}
           {steps && (
             <p className="text-sm text-muted">
-              Open bdap in <b>Chrome</b> or <b>Edge</b> and use the browser menu → <b>Install app</b> / <b>Add to Home screen</b>. On iPhone, use Safari&apos;s Share button → <b>Add to Home Screen</b>.
+              Browser menu → <b>Install app</b>
             </p>
           )}
         </>
