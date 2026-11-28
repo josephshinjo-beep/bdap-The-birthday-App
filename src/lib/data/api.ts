@@ -19,7 +19,6 @@ import type {
   Pool,
   ProfileInput,
   PushSubscriptionInput,
-  Role,
   Room,
   RoomPreview,
   RoomSettingsInput,
@@ -59,7 +58,7 @@ export interface DataApi {
   // members (admins see pending too)
   listMembers(roomId: string): Promise<Member[]>;
   decideRequest(roomId: string, userId: string, approve: boolean): Promise<void>;
-  setMemberRole(roomId: string, userId: string, role: Exclude<Role, "moderator">): Promise<void>;
+  setMemberRole(roomId: string, userId: string, role: "co_moderator" | "member"): Promise<void>;
   removeMember(roomId: string, userId: string): Promise<void>;
   /** Admins: set a member's birthday for this room only (null restores their own date). Not for yourself. */
   setMemberBirthday(roomId: string, userId: string, birthday: { month: number; day: number } | null): Promise<void>;
@@ -89,7 +88,7 @@ export interface DataApi {
   onPoolChange(celebrationId: string, cb: () => void): Unsubscribe;
   /** Admins: what the money is for, the total (split equally) and the plan for the day. */
   setCelebrationDetails(celebrationId: string, input: CelebrationDetailsInput): Promise<void>;
-  /** Class reps and admins: record that someone paid (e.g. cash). */
+  /** Admins: record that someone paid (e.g. cash). */
   recordCelebrationPayment(celebrationId: string, userId: string, paid: boolean, amount?: number | null): Promise<void>;
 
   // votes (e.g. cake flavour); closing sets the celebration's total to the winner's price
@@ -99,9 +98,9 @@ export interface DataApi {
   closePoll(pollId: string): Promise<void>;
   deletePoll(pollId: string): Promise<void>;
 
-  // class expenses: class reps request, admins approve, everyone pays their share
+  // class expenses: admins start a split, everyone pays their share
   listExpenses(roomId: string): Promise<Expense[]>;
-  /** Class reps and admins: the room's active UPI IDs to collect a split. */
+  /** Admins: the room's active UPI IDs to collect a split. */
   listUpiChoices(roomId: string): Promise<{ id: string; upiId: string; payeeName: string }[]>;
   requestExpense(roomId: string, input: ExpenseInput): Promise<void>;
   decideExpense(expenseId: string, approve: boolean): Promise<void>;

@@ -212,5 +212,5 @@ export function TabPanel({ id, children }: { id: string; children: ReactNode }) 
 }
 
 export function roleLabel(role: string) {
-  return role === "moderator" ? "Moderator" : role === "co_moderator" ? "Co-moderator" : role === "class_rep" ? "Class rep" : "Member";
+  return role === "moderator" ? "Moderator" : role === "co_moderator" ? "Co-moderator" : "Member";
 }

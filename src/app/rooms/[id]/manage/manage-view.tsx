@@ -169,7 +169,7 @@ function Manage({ room, session }: { room: Room; session: Session }) {
                 {splitRequests.length > 0 && (
                   <button type="button" onClick={() => setTab("expenses")} className="card card-danger flex w-full items-center justify-between gap-3 text-left">
                     <span>
-                      <b className="block text-plum">{splitRequests.length === 1 ? `Split request: ${splitRequests[0]!.title}` : `${splitRequests.length} split requests from class reps`}</b>
+                      <b className="block text-plum">{splitRequests.length === 1 ? `Split request: ${splitRequests[0]!.title}` : `${splitRequests.length} split requests`}</b>
                       <span className="hint">Approve them before the class sees them.</span>
                     </span>
                     <span aria-hidden="true" className="text-plum">→</span>
@@ -495,7 +495,7 @@ function MemberRow({
   me: string;
   isModerator: boolean;
   busy: boolean;
-  onRole: (r: "co_moderator" | "class_rep" | "member") => void;
+  onRole: (r: "co_moderator" | "member") => void;
   onRemove: () => void;
   onBirthday: (b: { month: number; day: number } | null) => void;
   onStart: () => void;
@@ -504,7 +504,7 @@ function MemberRow({
   const [editing, setEditing] = useState(false);
   // Admins can fix anyone's birthday in this room except their own (it's a surprise).
   const canBirthday = m.userId !== me;
-  const canRemove = m.userId !== me && m.role !== "moderator" && (m.role === "member" || m.role === "class_rep" || isModerator);
+  const canRemove = m.userId !== me && m.role !== "moderator" && (m.role === "member" || isModerator);
   const canRole = isModerator && m.userId !== me && m.role !== "moderator";
 
   return (
@@ -546,10 +546,9 @@ function MemberRow({
                 className="field !min-h-10 !w-auto !py-1.5 !pl-2 !pr-7 text-[13px] font-bold text-plum"
                 value={m.role}
                 disabled={busy}
-                onChange={(e) => onRole(e.target.value as "co_moderator" | "class_rep" | "member")}
+                onChange={(e) => onRole(e.target.value as "co_moderator" | "member")}
               >
                 <option value="member">Member</option>
-                <option value="class_rep">Class rep</option>
                 <option value="co_moderator">Co-mod</option>
               </select>
             </>

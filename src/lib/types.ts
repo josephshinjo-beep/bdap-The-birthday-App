@@ -1,7 +1,7 @@
 // Shared contracts between pages and the data layer.
 // Changing these affects both people: announce changes before merging.
 
-/** class_rep: can request expense splits and record who paid (not an admin). */
+/** class_rep is retired (it stays in the database enum, which can't drop values); nothing assigns it. */
 export type Role = "moderator" | "co_moderator" | "class_rep" | "member";
 
 /** Moderators and co-moderators run the room. */
@@ -9,10 +9,6 @@ export function isAdminRole(role: Role | null | undefined): boolean {
   return role === "moderator" || role === "co_moderator";
 }
 
-/** Admins plus class reps: can request splits and record payments. */
-export function isRepRole(role: Role | null | undefined): boolean {
-  return isAdminRole(role) || role === "class_rep";
-}
 export type MemberStatus = "pending" | "approved" | "declined";
 export type AmountMode = "fixed" | "suggested" | "any";
 export type CelebrationStatus = "upcoming" | "live" | "done";
@@ -210,7 +206,7 @@ export interface Pool {
   totalAmount: number;
 }
 
-/** Admins and class reps only. */
+/** Admins only. */
 export interface Payer {
   userId: string;
   fullName: string;
@@ -218,7 +214,7 @@ export interface Payer {
   upiId: string | null;
   amount: number | null;
   paidAt: string | null;
-  /** Set when a class rep or admin recorded the payment (e.g. cash). */
+  /** Set when an admin recorded the payment (e.g. cash). */
   recordedBy: string | null;
 }
 

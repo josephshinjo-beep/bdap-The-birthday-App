@@ -15,7 +15,7 @@ import { daysBetween, formatISODayMonth, relativeDays, todayIST } from "@/lib/da
 import { checkContribution } from "@/lib/split";
 import { buildUpiLink, formatRupees } from "@/lib/upi";
 import { useAsync } from "@/lib/use-async";
-import { isAdminRole, isRepRole, type Celebration, type Room, type Session, type Surprise } from "@/lib/types";
+import { isAdminRole, type Celebration, type Room, type Session, type Surprise } from "@/lib/types";
 
 export function SurpriseView() {
   return <AuthGate>{(s) => <SurpriseLoader session={s} />}</AuthGate>;
@@ -88,7 +88,7 @@ function SurpriseFlow({ room, celebration }: { room: Room; celebration: Celebrat
   }
   const giftRef = useRef<HTMLButtonElement>(null);
   const isAdmin = isAdminRole(room.myRole);
-  const isRep = isRepRole(room.myRole);
+  const isRep = isAdminRole(room.myRole);
   const days = daysBetween(todayIST(), celebration.date);
 
   useEffect(() => {
@@ -381,7 +381,7 @@ function PoolCard({ celebrationId, isRep, surprise, amount }: { celebrationId: s
         <PayersList
           payers={payers.data}
           split={surprise?.splitAmount ?? null}
-          title="Who paid (admins and class reps)"
+          title="Who paid (admins only)"
           onRecord={async (userId, paid) => {
             await data.recordCelebrationPayment(celebrationId, userId, paid);
             reloadPayers();

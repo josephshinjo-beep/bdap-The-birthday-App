@@ -47,7 +47,6 @@ export const DEMO_USERS = [
   { id: "u-kabir", label: "Member", hint: "Kabir · sees the surprise" },
   { id: "u-aarav", label: "Moderator", hint: "Aarav · runs CSE B" },
   { id: "u-riya", label: "Birthday person", hint: "Riya · birthday today (sees her wall)" },
-  { id: "u-f0", label: "Class rep", hint: "Ananya · requests splits, records payments" },
   { id: "u-new", label: "New student", hint: "No profile yet" },
 ] as const;
 export type DemoUserId = (typeof DEMO_USERS)[number]["id"];
@@ -201,8 +200,7 @@ function seed(): Store {
     { roomId: "r-cseb", userId: "u-kabir", role: "member", status: "approved", requestedAt: now },
     { roomId: "r-cseb", userId: "u-riya", role: "member", status: "approved", requestedAt: now },
     { roomId: "r-cseb", userId: "u-isha", role: "member", status: "pending", requestedAt: now },
-    // Ananya (u-f0) is the class rep.
-    ...FILLER.map((_, i) => ({ roomId: "r-cseb", userId: `u-f${i}`, role: (i === 0 ? "class_rep" : "member") as Role, status: "approved" as MemberStatus, requestedAt: now })),
+    ...FILLER.map((_, i) => ({ roomId: "r-cseb", userId: `u-f${i}`, role: "member" as Role, status: "approved" as MemberStatus, requestedAt: now })),
     { roomId: "r-hostel", userId: "u-meera", role: "moderator", status: "approved", requestedAt: now },
     { roomId: "r-hostel", userId: "u-riya", role: "member", status: "approved", requestedAt: now },
     { roomId: "r-hostel", userId: "u-f2", role: "member", status: "approved", requestedAt: now },
@@ -252,11 +250,11 @@ function seed(): Store {
     expenses: [
       {
         id: "exp-bus", roomId: "r-cseb", title: "Industrial visit bus", purpose: "Bus to the Technopark visit on Friday", totalAmount: 6600,
-        splitAmount: 300, upiAccountId: "upi-1", dueDate: addDays(today, 6), status: "approved", createdBy: "u-f0", createdAt: now,
+        splitAmount: 300, upiAccountId: "upi-1", dueDate: addDays(today, 6), status: "approved", createdBy: "u-meera", createdAt: now,
       },
       {
         id: "exp-print", roomId: "r-cseb", title: "Lab record printouts", purpose: "Printing and binding for 22 records", totalAmount: 1100,
-        splitAmount: null, upiAccountId: "upi-2", dueDate: addDays(today, 10), status: "requested", createdBy: "u-f0", createdAt: now,
+        splitAmount: null, upiAccountId: "upi-2", dueDate: addDays(today, 10), status: "approved", createdBy: "u-meera", createdAt: now,
       },
     ],
     expensePayments: FILLER.slice(0, 8).map((_, i) => ({ expenseId: "exp-bus", userId: `u-f${i}`, amount: 300, paidAt: now, recordedBy: i % 3 === 0 ? "u-f0" : null })),
@@ -383,7 +381,7 @@ function isAdmin(store: Store, roomId: string, userId: string) {
 
 function isRep(store: Store, roomId: string, userId: string) {
   const m = membership(store, roomId, userId);
-  return m?.status === "approved" && m.role !== "member";
+  return m?.status === "approved" && (m.role === "moderator" || m.role === "co_moderator");
 }
 
 function toPoll(store: Store, poll: StoredPoll, me: string): Poll {
@@ -739,6 +737,7 @@ export const mockApi: DataApi = {
     const me = requireUser();
     const store = load();
     if (!isModerator(store, roomId, me) || userId === me) throw new DataError("not_allowed");
+    if ((role as string) === "class_rep") throw new DataError("invalid_input");
     const m = membership(store, roomId, userId);
     if (!m || m.status !== "approved" || m.role === "moderator") throw new DataError("not_found");
     m.role = role;
@@ -1117,7 +1116,7 @@ export const mockApi: DataApi = {
     store.expenses.push(e);
     if (isAdmin(store, roomId, me)) approveExpense(store, e);
     else {
-      const who = store.profiles.find((x) => x.id === me)?.fullName ?? "A class rep";
+      const who = store.profiles.find((x) => x.id === me)?.fullName ?? "A moderator";
       for (const m of store.memberships) {
         if (m.roomId === roomId && m.status === "approved" && (m.role === "moderator" || m.role === "co_moderator")) {
           notify(store, m.userId, { roomId, celebrationId: null, kind: "expense_request", title: `Split request: ${e.title}`, body: `${who} wants to split ₹${e.totalAmount}. Approve it before the class sees it.`, url: `/rooms/${roomId}/manage?tab=expenses` });

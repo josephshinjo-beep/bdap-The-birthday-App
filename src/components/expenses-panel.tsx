@@ -7,7 +7,7 @@ import { formatISODayMonth, todayIST } from "@/lib/dates";
 import { checkContribution, splitAmount } from "@/lib/split";
 import { useAsync } from "@/lib/use-async";
 import { buildUpiLink, formatRupees } from "@/lib/upi";
-import { isAdminRole, isRepRole, type Expense, type Room } from "@/lib/types";
+import { isAdminRole, type Expense, type Room } from "@/lib/types";
 import { PayersList } from "./payers-list";
 import { EmptyState, ErrorNote, Loading } from "./ui";
 
@@ -19,12 +19,12 @@ const STATUS: Record<Expense["status"], { label: string; cls: string }> = {
 };
 
 /**
- * Class expenses (not just birthdays): class reps request a split, a moderator
- * approves it, then everyone pays their equal share. Reps record who paid.
+ * Class expenses (not just birthdays): a moderator or co-moderator starts a split,
+ * then everyone pays their equal share. Admins record who paid.
  */
 export function ExpensesPanel({ room, memberCount }: { room: Room; memberCount: number }) {
   const expenses = useAsync(() => data.listExpenses(room.id), [room.id]);
-  const isRep = isRepRole(room.myRole);
+  const isRep = isAdminRole(room.myRole);
   const isAdmin = isAdminRole(room.myRole);
   const [showForm, setShowForm] = useState(false);
 
@@ -33,7 +33,7 @@ export function ExpensesPanel({ room, memberCount }: { room: Room; memberCount: 
       {isRep && (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="hint max-w-md">
-            {isAdmin ? "Your splits go out to the class straight away." : "As a class rep, your splits go to a moderator for approval before the class sees them."}
+            Your splits go out to the class straight away.
           </p>
           {!showForm && (
             <button type="button" className="btn btn-sm" onClick={() => setShowForm(true)}>
@@ -57,7 +57,7 @@ export function ExpensesPanel({ room, memberCount }: { room: Room; memberCount: 
         <Loading />
       ) : !expenses.data?.length ? (
         <EmptyState title="No class expenses yet">
-          {isRep ? "Start a split for a trip, printouts, a gift — anything the class shares." : "When a class rep starts a split (a trip, printouts…), it shows up here."}
+          {isRep ? "Start a split for a trip, printouts, a gift, anything the class shares." : "When a moderator starts a split (a trip, printouts…), it shows up here."}
         </EmptyState>
       ) : (
         <ul className="grid gap-3.5 lg:grid-cols-2">
@@ -233,7 +233,7 @@ function PayBox({ expense: e, roomName, onDone }: { expense: Expense; roomName: 
           </div>
         </div>
       ) : (
-        <p className="hint">No UPI ID set for this split. Pay the class rep directly.</p>
+        <p className="hint">No UPI ID set for this split. Pay the moderator directly.</p>
       )}
       <div>
         <label htmlFor={`amt-${e.id}`} className="label">Your amount (₹)</label>

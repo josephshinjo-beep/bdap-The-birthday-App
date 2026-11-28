@@ -5,7 +5,7 @@ import type { Payer } from "@/lib/types";
 import { Avatar, ErrorNote } from "./ui";
 
 /**
- * Who paid, for admins and class reps. With `onRecord`, reps can mark
+ * Who paid, for admins. With `onRecord`, admins can mark
  * someone as paid (e.g. cash handed over) or undo it.
  */
 export function PayersList({

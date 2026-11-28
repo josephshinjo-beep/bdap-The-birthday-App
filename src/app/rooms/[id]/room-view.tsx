@@ -241,7 +241,7 @@ function MemberList({ members, me }: { members: Member[]; me: string }) {
             <span className="block truncate">{m.fullName}{m.userId === me && " (you)"}</span>
             <small className="block text-xs font-normal text-muted">@{m.username} · {m.birthDay} {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m.birthMonth - 1]}</small>
           </div>
-          {m.role !== "member" ? <span className={`pill ${m.role === "moderator" ? "" : m.role === "class_rep" ? "pill-sun" : "pill-mint"}`}>{roleLabel(m.role)}</span> : <span />}
+          {m.role !== "member" ? <span className={`pill ${m.role === "moderator" ? "" : "pill-mint"}`}>{roleLabel(m.role)}</span> : <span />}
         </li>
       ))}
     </ul>
