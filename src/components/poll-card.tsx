@@ -5,6 +5,7 @@ import { useAsync } from "@/lib/use-async";
 import { formatRupees } from "@/lib/upi";
 import type { Poll, PollOptionInput } from "@/lib/types";
 import { ErrorNote, Loading } from "./ui";
+import { TrophyIcon } from "@/components/icons";
 
 /**
  * The vote for a celebration (e.g. cake flavour). Members vote; admins can
@@ -67,7 +68,7 @@ function PollView({ poll, canManage, busy, error, run }: { poll: Poll; canManage
                 <span aria-hidden="true" className={`absolute inset-y-0 left-0 ${winner ? "bg-[var(--pill-sun-bg)]" : "bg-[var(--pill-mint-bg)]"}`} style={{ width: `${(o.votes / max) * 100}%` }} />
                 <span className="relative flex items-center justify-between gap-2">
                   <span className="font-bold text-plum">
-                    {winner && "🏆 "}
+                    {winner && <TrophyIcon className="mr-1 text-sun-deep" />}
                     {o.label}
                     {mine && <span className="ml-1.5 text-xs font-bold text-ok">✓ your vote</span>}
                   </span>

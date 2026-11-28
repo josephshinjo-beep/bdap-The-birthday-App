@@ -6,6 +6,7 @@ import { EmptyState, Loading, Page, RoomBadge, roleLabel } from "@/components/ui
 import { data } from "@/lib/data";
 import { useAsync } from "@/lib/use-async";
 import type { Session } from "@/lib/types";
+import { ChevronIcon } from "@/components/icons";
 
 export function RoomsView() {
   return <AuthGate>{(s) => <Rooms session={s} />}</AuthGate>;
@@ -18,7 +19,7 @@ function Rooms({ session }: { session: Session }) {
   return (
     <Page size="wide">
       <h1 className="a-h enter">
-        Hey <em>{first}</em> 👋
+        Hey <span className="hl">{first}</span>
       </h1>
       <p className="a-sub enter-2">Your class, hostel and club rooms.</p>
       <div className="lg:max-w-xl">
@@ -59,9 +60,7 @@ function Rooms({ session }: { session: Session }) {
                   {r.myStatus === "pending" ? (
                     <span className="pill pill-sun">Pending</span>
                   ) : (
-                    <span aria-hidden="true" className="text-plum">
-                      →
-                    </span>
+                    <ChevronIcon className="text-plum" />
                   )}
                 </Link>
               </li>

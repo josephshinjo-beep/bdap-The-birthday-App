@@ -120,7 +120,7 @@ export function DateBlock({ month, day }: { month: number; day: number }) {
   return (
     <span className="block w-11 rounded-sm border border-line bg-surface py-[3px] text-center leading-tight">
       <b className="block font-display text-[17px] text-plum">{String(day).padStart(2, "0")}</b>
-      <span className="text-[10px] font-bold uppercase text-accent">{MONTHS[month - 1]}</span>
+      <span className="text-[11px] font-bold text-accent">{MONTHS[month - 1]}</span>
     </span>
   );
 }
@@ -154,7 +154,7 @@ export function Countdown({ date, tone = "light" }: { date: string; tone?: "ligh
   }, []);
   if (!now) return <div className="h-[52px]" />;
   const c = countdownTo(startOfDayIST(date), now);
-  if (c.done) return <p className="font-display text-xl font-extrabold">It&apos;s today! 🎉</p>;
+  if (c.done) return <p className="font-display text-xl font-extrabold">It&apos;s today!</p>;
   const cells: [number, string][] = [
     [c.days, "days"],
     [c.hours, "hrs"],
@@ -167,7 +167,7 @@ export function Countdown({ date, tone = "light" }: { date: string; tone?: "ligh
       {cells.map(([v, l]) => (
         <div key={l} className={`min-w-[52px] rounded-sm px-2 py-1.5 text-center ${cell}`} aria-hidden="true">
           <b className="block font-mono text-lg">{String(v).padStart(2, "0")}</b>
-          <span className="text-[10px] uppercase tracking-wider">{l}</span>
+          <span className="text-[11px]">{l}</span>
         </div>
       ))}
     </div>

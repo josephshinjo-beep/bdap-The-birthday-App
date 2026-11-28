@@ -194,7 +194,7 @@ export function InstallBanner() {
       className={`pop-in fixed inset-x-3 z-[45] md:inset-x-auto md:right-5 md:w-[380px] ${dataMode === "mock" ? "bottom-20 md:bottom-5" : "bottom-3 md:bottom-5"}`}
       style={{ marginBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="card flex flex-col gap-3 border-2 border-plum shadow-[0_18px_40px_-18px_rgba(42,31,79,0.55)]">
+      <div className="card flex flex-col gap-3 border-2 border-plum shadow-pop">
         <div className="flex items-start gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/icons/192" alt="" width={48} height={48} className="h-12 w-12 shrink-0 rounded-[12px]" />

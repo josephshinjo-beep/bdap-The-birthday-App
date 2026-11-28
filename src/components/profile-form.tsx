@@ -4,6 +4,7 @@ import { data } from "@/lib/data";
 import { dobAllowed, maxDob, todayIST } from "@/lib/dates";
 import { DataError, type ProfileInput } from "@/lib/types";
 import { ErrorNote } from "./ui";
+import { LockIcon } from "@/components/icons";
 
 const USERNAME = /^[a-z0-9._]{3,24}$/;
 
@@ -141,7 +142,7 @@ export function ProfileForm({
         {lockDob ? (
           <>
             <input id={ids.dob} type="date" className="field cursor-not-allowed bg-surface-2 text-muted" value={dob} readOnly aria-readonly="true" aria-describedby={ids.dobHint} />
-            <p id={ids.dobHint} className="hint mt-1">🔒 Your birthday is locked once saved, so it can&apos;t be changed here. Classmates only see the day and month.</p>
+            <p id={ids.dobHint} className="hint mt-1"><LockIcon /> Your birthday is locked once saved, so it can&apos;t be changed here. Classmates only see the day and month.</p>
           </>
         ) : (
           <>

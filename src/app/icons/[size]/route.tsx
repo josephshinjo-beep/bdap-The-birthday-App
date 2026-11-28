@@ -1,5 +1,6 @@
 // PWA icons drawn at request time (placeholder art until the real logo arrives).
 import { ImageResponse } from "next/og";
+import { BRAND } from "@/styles/brand-colors";
 
 const SIZES = new Set([180, 192, 512]);
 
@@ -16,14 +17,14 @@ export async function GET(_req: Request, ctx: RouteContext<"/icons/[size]">) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#ff4f7b",
+          background: BRAND.accent,
         }}
       >
         <div
           style={{
             width: size * 0.56,
             height: size * 0.5,
-            background: "#ffd23f",
+            background: BRAND.sun,
             borderRadius: size * 0.06,
             display: "flex",
             alignItems: "center",
@@ -31,8 +32,8 @@ export async function GET(_req: Request, ctx: RouteContext<"/icons/[size]">) {
             position: "relative",
           }}
         >
-          <div style={{ position: "absolute", width: size * 0.1, height: "100%", background: "#221b3a" }} />
-          <div style={{ position: "absolute", width: "100%", height: size * 0.1, background: "#221b3a" }} />
+          <div style={{ position: "absolute", width: size * 0.1, height: "100%", background: BRAND.ink }} />
+          <div style={{ position: "absolute", width: "100%", height: size * 0.1, background: BRAND.ink }} />
         </div>
       </div>
     ),

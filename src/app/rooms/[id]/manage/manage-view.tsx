@@ -12,6 +12,7 @@ import { onMockChange } from "@/lib/data/mock";
 import { dataMode } from "@/lib/data";
 import { useAsync } from "@/lib/use-async";
 import { isAdminRole, type Celebration, type CelebrationDecision, type Member, type Room, type Session } from "@/lib/types";
+import { CakeIcon, ChevronIcon } from "@/components/icons";
 
 export function ManageView() {
   return <AuthGate>{(s) => <ManageLoader session={s} />}</AuthGate>;
@@ -304,9 +305,7 @@ function SettingsLink({ href, title, body, danger = false }: { href: string; tit
         <b className={`block ${danger ? "text-danger" : "text-plum"}`}>{title}</b>
         <span className="hint">{body}</span>
       </span>
-      <span aria-hidden="true" className="text-plum">
-        →
-      </span>
+      <ChevronIcon className="mt-1 text-plum" />
     </Link>
   );
 }
@@ -437,7 +436,7 @@ function BirthdaysTab({ room, cels, loading, busy, act, reload }: { room: Room; 
                   <div className="flex flex-wrap gap-2">
                     {c.decision !== "celebrate" && (
                       <button type="button" className="btn btn-sm" disabled={busy !== null} onClick={() => decide("celebrate", `Celebrating ${first}'s birthday`)}>
-                        Celebrate 🎉
+                        Celebrate
                       </button>
                     )}
                     {c.decision !== "wish_only" && (
@@ -464,7 +463,7 @@ function BirthdaysTab({ room, cels, loading, busy, act, reload }: { room: Room; 
         <section className="card flex flex-col gap-2 text-[13px]">
           <h2 className="label">How approval works</h2>
           <p>
-            <b className="text-plum">Celebrate 🎉</b> sends the secret reminders at your times and opens the surprise page and UPI collection.
+            <b className="text-plum">Celebrate</b> sends the secret reminders at your times and opens the surprise page and UPI collection.
           </p>
           <p>
             <b className="text-plum">Just wish</b> sends no reminders and collects nothing. On the day the class is nudged to wish them.
@@ -518,7 +517,7 @@ function MemberRow({
             {m.userId === me && " (you)"}
           </span>
           <small className="block truncate text-xs font-normal text-muted">
-            🎂 {formatDayMonth(m.birthMonth, m.birthDay)}
+            <CakeIcon /> {formatDayMonth(m.birthMonth, m.birthDay)}
             {m.birthdayEdited && (
               <span title="Edited by an admin">
                 {" "}✎<span className="sr-only"> edited</span>
@@ -536,7 +535,7 @@ function MemberRow({
               aria-label={`Birthday for ${m.fullName}`}
               onClick={() => setEditing((v) => !v)}
             >
-              🎂
+              <CakeIcon className="text-lg" />
             </button>
           )}
           {canRole && (
@@ -654,7 +653,7 @@ function BirthdayEditor({
       </div>
       {!confirmStart ? (
         <button type="button" className="btn-secondary btn-sm self-start" disabled={busy} onClick={() => setConfirmStart(true)}>
-          🎉 Start birthday today
+          Start birthday today
         </button>
       ) : (
         <div className="flex flex-wrap items-center gap-2">

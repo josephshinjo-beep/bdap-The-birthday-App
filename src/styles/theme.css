@@ -11,7 +11,7 @@
 
   /* surfaces */
   --bg: #fff8ec;
-  --surface: #ffffff;
+  --surface: #fffdf8; /* white tinted toward the cream paper */
   --surface-2: #f3eadb; /* tab track, progress track */
   --line: #efe3cf;
 
@@ -19,7 +19,7 @@
   --ink: #221b3a;
   --muted: #6b6385;
   --plum: #2a1f4f; /* headings, main buttons, ticket */
-  --on-plum: #ffffff;
+  --on-plum: #fffaf3;
   --plum-soft: #cfc6f2; /* muted text on plum */
 
   /* brand */
@@ -49,6 +49,26 @@
   --danger-bg: #fff5f7;
   --switch-off: #d9d0c1;
   --avatar-bg: #e9e1ff;
+
+  /* home hero, birthday wall */
+  --plum-deep: #4b2a6e;
+  --lilac: #e8defd; /* text on the plum hero */
+  --cork-edge: #c9a27a; /* wall board frame */
+  --note-peach: #ffe7d6;
+  --note-rose: #ffd6e0;
+  --wall-gloss: rgb(255 253 248 / 0.35);
+  --wall-rule: rgb(42 31 79 / 0.035);
+
+  /* tints and shadows (every colour stays a token) */
+  --glass-bg: rgb(255 253 248 / 0.2);
+  --accent-glow: rgb(255 79 123 / 0.2);
+  --balloon-string: rgb(255 253 248 / 0.5);
+  --shade-soft: rgb(34 27 58 / 0.18);
+  --shade-knob: rgb(34 27 58 / 0.28);
+  --shade-faint: rgb(34 27 58 / 0.08);
+  --shadow-pop: 0 18px 40px -18px rgb(42 31 79 / 0.55);
+  --shadow-board: inset 0 0 60px rgb(34 27 58 / 0.12); /* the wall board's vignette */
+  --shadow-note: 0 10px 18px -8px rgb(34 27 58 / 0.45); /* a note lifted off the board */
 
   /* type */
   --font-display: var(--font-display-src), "Trebuchet MS", system-ui, sans-serif;
@@ -96,6 +116,13 @@
   --color-danger-line: var(--danger-line);
   --color-danger-bg: var(--danger-bg);
   --color-avatar: var(--avatar-bg);
+  --color-plum-deep: var(--plum-deep);
+  --color-lilac: var(--lilac);
+  --color-cork-edge: var(--cork-edge);
+  --color-note-peach: var(--note-peach);
+  --shadow-pop: var(--shadow-pop);
+  --shadow-board: var(--shadow-board);
+  --shadow-note: var(--shadow-note);
 
   --font-display: var(--font-display);
   --font-sans: var(--font-body);

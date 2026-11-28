@@ -41,13 +41,13 @@ export default function Home() {
         {/* Laptop-only visual: the blueprint's 6 PM lock screen with the secret heads-up. */}
         <div
           className="relative hidden h-[440px] flex-col xl:h-[480px] gap-3.5 overflow-hidden rounded-xl p-7 text-white lg:flex"
-          style={{ background: "linear-gradient(160deg, var(--plum), #4b2a6e 60%, var(--accent))" }}
+          style={{ background: "linear-gradient(160deg, var(--plum), var(--plum-deep) 60%, var(--accent))" }}
         >
           <div className="absolute inset-x-6 bottom-0 h-[42%]">
             <BalloonField count={5} sizes={[46, 54, 40, 50, 44]} start={1} />
           </div>
           <p className="mt-6 text-center font-display text-[72px] font-bold leading-none">18:00</p>
-          <p className="-mt-1 text-center text-sm text-[#e8defd]">The evening before Riya&apos;s birthday</p>
+          <p className="-mt-1 self-center rounded-full bg-plum px-3 py-1 text-center text-sm text-lilac">The evening before Riya&apos;s birthday</p>
           <div className="drop-in relative z-10 mt-4 grid grid-cols-[38px_1fr] gap-3 rounded-lg bg-white/95 p-3.5 text-ink">
             <span className="grid h-[38px] w-[38px] place-items-center rounded-[9px] bg-plum font-display text-[13px] font-extrabold text-white">bd</span>
             <span>
@@ -72,7 +72,7 @@ export default function Home() {
               </span>
             </span>
           </div>
-          <p className="relative z-10 mt-auto text-center text-xs text-[#e8defd]">Riya gets none of these. (Pop a balloon!)</p>
+          <p className="relative z-10 mt-auto self-center rounded-full bg-plum px-3 py-1 text-center text-xs text-lilac">Riya gets none of these. (Pop a balloon!)</p>
         </div>
       </section>
 

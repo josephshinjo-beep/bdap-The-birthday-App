@@ -38,7 +38,7 @@ export function LoginView() {
         <div className="float">
           <GiftArt size={110} />
         </div>
-        <h1 className="a-h mt-3">Log in to <em>bdap</em></h1>
+        <h1 className="a-h mt-3">Log in to <span className="hl">bdap</span></h1>
         <p className="a-sub">Use your Google account. No passwords to remember.</p>
         <button type="button" onClick={google} disabled={busy} className="btn-secondary mt-4 w-full">
           <svg aria-hidden="true" width="20" height="20" viewBox="0 0 48 48">

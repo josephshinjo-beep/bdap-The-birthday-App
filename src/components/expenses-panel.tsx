@@ -257,7 +257,7 @@ function PayBox({ expense: e, roomName, onDone }: { expense: Expense; roomName: 
       )}
       <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold text-ink">
         <input type="checkbox" className="h-5 w-5 accent-[var(--mint)]" checked={Boolean(e.myPaidAt)} disabled={busy} onChange={(ev) => toggle(ev.target.checked)} />
-        {e.myPaidAt ? "You've paid 🎉" : "I've paid"}
+        {e.myPaidAt ? "You've paid" : "I've paid"}
       </label>
       <ErrorNote>{error}</ErrorNote>
     </div>

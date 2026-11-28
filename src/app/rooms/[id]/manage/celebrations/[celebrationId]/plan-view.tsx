@@ -82,7 +82,7 @@ function Plan({ room, celebration, reload }: { room: Room; celebration: Celebrat
           {celebration.decision === "celebrate" ? "Celebrating" : celebration.decision === "wish_only" ? "Wish only" : "Needs a decision"}
         </span>
         <h1 className="a-h mt-2">
-          Plan <em>{first}&apos;s</em> birthday
+          Plan <span className="hl">{first}&apos;s</span> birthday
         </h1>
         <p className="a-sub">
           {formatISODayMonth(celebration.date)} · {relativeDays(daysBetween(todayIST(), celebration.date))}. {first} never sees this page.
@@ -97,7 +97,7 @@ function Plan({ room, celebration, reload }: { room: Room; celebration: Celebrat
               <h2 className="label">What the money is for</h2>
               <div>
                 <label htmlFor="purpose" className="label">What for</label>
-                <input id="purpose" className="field" placeholder="Cake 🎂, a gift, decorations…" maxLength={120} value={purpose} onChange={(e) => setPurpose(e.target.value)} />
+                <input id="purpose" className="field" placeholder="Cake, a gift, decorations…" maxLength={120} value={purpose} onChange={(e) => setPurpose(e.target.value)} />
               </div>
               <div>
                 <label htmlFor="total" className="label">Total expense (₹)</label>

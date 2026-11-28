@@ -1,3 +1,11 @@
+/* Hallmark · shape: app screen · genre: playful · theme: brand · redesign: restyle
+ * paper: #fff8ec (cream) · accent: #ff4f7b (pink) · display: the brand display face · body: the brand body face
+ * nav: kept · signature: kept (the bd knob, the gift and the birthday wall) · states: hover, active, focus-visible, disabled, busy, error
+ * axes: light/rounded-sans/warm · posture: committed · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P3 H- E3 S3 R3 V4 · weakest: E, emoji icons and tracked capitals read as generated; replaced with drawn icons, words and sentence-case labels */
+/* Hallmark · waive 23 · the accent fills the lower part of the 18:00 lock-screen panel on the home page · that panel is the brand's evening reminder scene, and its pink is the brand balloon colour */
+/* Hallmark · waive 39b · the poppable balloon buttons (124px) and the two-line demo sign-in cards (65px) · popping a balloon is the game, and each demo card names the person and their role */
+/* Hallmark · waive 38iii · one accent word per screen heading (Hey Kabir, Plan Riya's birthday) · the bdap brand blueprint sets one pink word in each heading; kept as the brand */
 @import "tailwindcss";
 @import "../styles/theme.css";
 
@@ -9,6 +17,13 @@
     font-size: 15px;
     line-height: 1.55;
     -webkit-tap-highlight-color: transparent;
+  }
+  html,
+  body {
+    overflow-x: clip;
+  }
+  html {
+    scrollbar-color: var(--plum-soft) var(--bg);
   }
   body {
     min-height: 100dvh;
@@ -43,7 +58,7 @@
     letter-spacing: -0.02em;
     color: var(--plum);
   }
-  .a-h em {
+  .a-h .hl {
     font-style: normal;
     color: var(--accent);
   }
@@ -122,7 +137,7 @@
   .btn-light {
     background: var(--surface);
     border-color: var(--surface);
-    color: var(--accent);
+    color: var(--pill-pink-ink); /* the brand pink is 3.1:1 on white; its deep ink is 6.9:1 */
   }
   .btn-light {
     color: var(--plum);
@@ -147,7 +162,7 @@
   }
   .btn-sm {
     min-height: 40px;
-    padding: 7px 12px;
+    padding: 8px 12px;
     font-size: 13px;
     border-radius: var(--radius-sm);
   }
@@ -169,7 +184,7 @@
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
-    padding: 14px;
+    padding: 16px;
   }
   .card-danger {
     border-color: var(--danger-line);
@@ -187,19 +202,17 @@
 
   .label {
     display: block;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
     color: var(--muted);
   }
   label.label {
-    margin-bottom: 5px;
+    margin-bottom: 4px;
   }
   .field {
     width: 100%;
     min-height: 48px;
-    padding: 11px 12px;
+    padding: 12px;
     font: inherit;
     font-size: 15px;
     color: var(--ink);
@@ -224,11 +237,11 @@
   .chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     font-size: 12px;
     font-weight: 700;
     border-radius: 999px;
-    padding: 4px 10px;
+    padding: 4px 12px;
     background: var(--pill-bg);
     color: var(--pill-ink);
     white-space: nowrap;
@@ -246,14 +259,14 @@
     color: var(--pill-sun-ink);
   }
   .pill-glass {
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
+    background: var(--glass-bg);
+    color: var(--on-plum);
   }
 
   /* Segmented choice (amount mode, amount chips). */
   .seg {
     display: flex;
-    gap: 6px;
+    gap: 8px;
   }
   .seg > * {
     flex: 1;
@@ -315,7 +328,7 @@
 }
 @keyframes pulse-ring {
   50% {
-    box-shadow: 0 0 0 6px rgba(255, 79, 123, 0.2);
+    box-shadow: 0 0 0 6px var(--accent-glow);
   }
 }
 @keyframes shake {
@@ -402,7 +415,7 @@
   top: 100%;
   width: 1px;
   height: 40px;
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--balloon-string);
 }
 
 /* Poppable balloons: sway and drift up, then pop. */
@@ -439,7 +452,7 @@
   animation: balloon-sway 6s ease-in-out infinite;
   transform-origin: 50% 100%;
   cursor: pointer;
-  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.18));
+  filter: drop-shadow(0 8px 10px var(--shade-soft));
 }
 .balloon-btn:focus-visible {
   outline: 3px solid var(--sky);
@@ -477,7 +490,7 @@
   height: 40px;
   border-radius: 999px;
   background: var(--switch-off);
-  box-shadow: inset 0 2px 4px rgba(34, 27, 58, 0.18);
+  box-shadow: inset 0 2px 4px var(--shade-soft);
   overflow: hidden;
   isolation: isolate;
   cursor: pointer;
@@ -503,13 +516,16 @@
   background: var(--accent);
   opacity: min(1, calc(var(--p) * 3));
 }
+/* A fixed-length bar that slides (transform only): its right end follows the knob,
+   and the part left of the track is clipped by the track's rounded edge. */
 .liquid-switch__tail {
-  left: 4px;
+  left: -28px;
   top: 4px;
   height: 32px;
-  width: calc(32px + var(--p) * 32px);
+  width: 64px;
   background: linear-gradient(90deg, var(--accent-soft), var(--accent));
-  transition: width 720ms var(--ease-drop), opacity 260ms var(--ease-out);
+  transform: translateX(calc(var(--p) * 32px));
+  transition: transform 720ms var(--ease-drop), opacity 260ms var(--ease-out);
 }
 .liquid-switch__head {
   left: 4px;
@@ -532,8 +548,8 @@
 .liquid-switch[aria-checked="false"] .liquid-switch__tail,
 .liquid-switch[aria-checked="false"] .liquid-switch__head,
 .liquid-switch[aria-checked="false"] .liquid-switch__drop {
-  transition-property: width, transform, opacity;
-  transition-delay: 0s, 0s, 380ms;
+  transition-property: transform, opacity;
+  transition-delay: 0s, 380ms;
 }
 .liquid-switch__knob {
   position: absolute;
@@ -557,7 +573,7 @@
   font-size: 12px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  box-shadow: 0 2px 6px rgba(34, 27, 58, 0.28), inset 0 -2px 0 rgba(34, 27, 58, 0.08);
+  box-shadow: 0 2px 6px var(--shade-knob), inset 0 -2px 0 var(--shade-faint);
   transition: color 300ms var(--ease-out);
 }
 .liquid-switch[aria-checked="true"] .liquid-switch__face {
@@ -570,7 +586,7 @@
 /* While dragging, the liquid follows the finger closely (a short lag keeps it fluid). */
 .liquid-switch.is-dragging .liquid-switch__tail,
 .liquid-switch.is-dragging .liquid-switch__drop {
-  transition: width 140ms linear, transform 220ms linear, opacity 120ms linear;
+  transition: transform 180ms linear, opacity 120ms linear;
   transition-delay: 0s;
 }
 .liquid-switch__face.wobble-on,

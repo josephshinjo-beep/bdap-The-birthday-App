@@ -76,7 +76,7 @@ function Join({ session }: { session: Session }) {
           <span aria-hidden="true">←</span> Back
         </button>
         <span className="pill self-start">Joining {preview.name}</span>
-        <h1 className="a-h">Tell your class <em>who you are</em></h1>
+        <h1 className="a-h">Tell your class <span className="hl">who you are</span></h1>
         <p className="a-sub">{preview.moderatorFirstName ?? "The moderator"} sees these when you ask to join.</p>
         <ProfileForm
           initial={{ fullName: session.suggestedName ?? "" }}
@@ -94,9 +94,9 @@ function Join({ session }: { session: Session }) {
   return (
     <Page>
       <BackLink href="/">Back</BackLink>
-      <h1 className="a-h enter">Got a <em>room code?</em></h1>
+      <h1 className="a-h enter">Got a <span className="hl">room code?</span></h1>
       <p className="a-sub enter-2">
-        Ask your class moderator. It looks like <span className="font-mono text-[13px] text-plum">K7P2QX</span>.
+        Ask your class moderator. It looks like <code className="font-mono text-[13px] text-plum">K7P2QX</code>.
       </p>
       <div className="enter-2">
         <CodeInput value={code} onChange={setCode} invalid={notFound} autoFocus={!initialCode} />

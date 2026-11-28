@@ -25,7 +25,7 @@ function Onboarding({ session }: { session: Session }) {
     <Page narrow>
       <div className="enter flex flex-col gap-2">
         <span className="pill pill-sun self-start">One-time setup</span>
-        <h1 className="a-h">Tell your class <em>who you are</em></h1>
+        <h1 className="a-h">Tell your class <span className="hl">who you are</span></h1>
         <p className="a-sub">This is how you show up in every room you join.</p>
       </div>
       <div className="enter-2">

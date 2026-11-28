@@ -51,7 +51,7 @@ function Create({ session }: { session: Session }) {
     return (
       <Page>
         <h1 className="a-h pop-in mt-2">
-          <em>{settings.name}</em> is ready 🎉
+          <span className="hl">{settings.name}</span> is ready
         </h1>
         <p className="a-sub">Share this code in your class group. You let people in from the dashboard.</p>
         <CodeTicket code={created.code} roomName={settings.name} />
@@ -69,7 +69,7 @@ function Create({ session }: { session: Session }) {
     <Page size="wide">
       <BackLink href="/rooms">Back</BackLink>
       <h1 className="a-h enter">
-        Start a room for <em>your class</em>
+        Start a room for <span className="hl">your class</span>
       </h1>
       <p className="a-sub enter-2">You&apos;ll be the moderator. It takes a minute.</p>
       <form onSubmit={submit} className="grid gap-3.5 lg:grid-cols-2 lg:items-start lg:gap-x-10 lg:gap-y-5" noValidate>

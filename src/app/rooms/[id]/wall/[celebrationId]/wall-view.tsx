@@ -10,6 +10,7 @@ import { formatISODayMonth } from "@/lib/dates";
 import { drawStoryCard, shareStoryCard, type CardTheme } from "@/lib/share-card";
 import { useAsync } from "@/lib/use-async";
 import type { Session, WallInfo, Wish, WishColor } from "@/lib/types";
+import { LockIcon } from "@/components/icons";
 
 export function WallView() {
   return <AuthGate>{(s) => <WallLoader session={s} />}</AuthGate>;
@@ -67,18 +68,18 @@ function Wall({ info, initialWishes, reload }: { info: WallInfo; initialWishes: 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           {isMe ? (
-            <span className="pill pill-sun">Happy birthday! 🎂</span>
+            <span className="pill pill-sun">Happy birthday!</span>
           ) : (
             <span className="pill pill-pink">{info.revealed ? `${first}'s birthday is today` : `Revealed to ${first} on ${formatISODayMonth(info.date)}`}</span>
           )}
           <h1 className="a-h mt-2">
             {isMe ? (
               <>
-                Your birthday <em>wall</em>
+                Your birthday <span className="hl">wall</span>
               </>
             ) : (
               <>
-                <em>{first}&apos;s</em> birthday wall
+                <span className="hl">{first}&apos;s</span> birthday wall
               </>
             )}
           </h1>
@@ -144,11 +145,11 @@ function Board({
       ref={boardRef}
       role="region"
       aria-label="Birthday wall"
-      className="relative w-full touch-pan-y select-none overflow-hidden rounded-xl border-[10px] border-[#c9a27a] shadow-[inset_0_0_60px_rgba(0,0,0,0.12)]"
+      className="relative w-full touch-pan-y select-none overflow-hidden rounded-xl border-[10px] border-cork-edge shadow-board"
       style={{
         aspectRatio: "var(--wall-ratio)",
         background:
-          "radial-gradient(circle at 20% 15%, rgba(255,255,255,0.35), transparent 40%), repeating-linear-gradient(0deg, rgba(42,31,79,0.035) 0 2px, transparent 2px 26px), linear-gradient(160deg, #ffe7d6, #ffd6e0 55%, #e8defd)",
+          "radial-gradient(circle at 20% 15%, var(--wall-gloss), transparent 40%), repeating-linear-gradient(0deg, var(--wall-rule) 0 2px, transparent 2px 26px), linear-gradient(160deg, var(--note-peach), var(--note-rose) 55%, var(--lilac))",
       }}
     >
       <style>{`[aria-label="Birthday wall"]{--wall-ratio:3/4.4;--note-max-x:57%}@media(min-width:768px){[aria-label="Birthday wall"]{--wall-ratio:16/10;--note-max-x:80%}}`}</style>
@@ -164,7 +165,7 @@ function Board({
             key={w.id}
             tabIndex={movable ? 0 : undefined}
             aria-label={`Note from ${w.authorName}${w.isPrivate ? ", private" : ""}${movable ? ". Use arrow keys to move it." : ""}`}
-            className={`absolute w-[42%] max-w-[230px] p-3 pt-5 text-[13px] leading-snug text-[#2a1f4f] shadow-[0_10px_18px_-8px_rgba(34,27,58,0.45)] md:w-[19%] md:text-sm ${
+            className={`absolute w-[42%] max-w-[230px] p-3 pt-5 text-[13px] leading-snug text-plum shadow-note md:w-[19%] md:text-sm ${
               movable ? "cursor-grab touch-none active:cursor-grabbing" : ""
             } ${top === w.id ? "z-20" : "z-10"} focus-visible:outline-3 focus-visible:outline-sky`}
             // Clamp so a note always fits on the wall, whatever the screen width.
@@ -203,11 +204,11 @@ function Board({
             <span aria-hidden="true" className="absolute -top-2.5 left-1/2 h-5 w-16 -translate-x-1/2 rotate-[-3deg] bg-white/70 shadow-sm" />
             {w.isPrivate && (
               <span className="mb-1 inline-block rounded-full bg-plum px-2 py-0.5 text-[10px] font-bold text-white">
-                🔒 {isMe ? "Only you can read this" : "Private"}
+                <LockIcon /> {isMe ? "Only you can read this" : "Private"}
               </span>
             )}
             <p className="whitespace-pre-wrap break-words">{w.message}</p>
-            <p className="mt-2 text-right text-xs font-bold text-[#6b6385]">— {w.authorName.split(" ")[0]}</p>
+            <p className="mt-2 text-right text-xs font-bold text-muted">{w.authorName.split(" ")[0]}</p>
             {w.mine && (
               <button
                 type="button"
@@ -285,7 +286,7 @@ function Composer({ celebrationId, firstName, onAdded }: { celebrationId: string
       <label className="flex min-h-11 cursor-pointer items-start gap-2.5 text-sm">
         <input type="checkbox" className="mt-0.5 h-5 w-5 accent-[var(--plum)]" checked={isPrivate} onChange={(e) => setPrivate(e.target.checked)} />
         <span>
-          <b className="text-plum">🔒 Private message</b>
+          <b className="text-plum"><LockIcon /> Private message</b>
           <span className="block text-muted">Only {firstName} can read it (classmates see nothing).</span>
         </span>
       </label>
@@ -334,13 +335,13 @@ function ShareCardButton({ info, wishes }: { info: WallInfo; wishes: Wish[] }) {
   async function share() {
     if (!blobRef.current) return;
     const result = await shareStoryCard(blobRef.current, `${first}-birthday-bdap.png`, `Happy birthday ${first}!`);
-    setStatus(result === "shared" ? "Shared! 🎉" : result === "downloaded" ? "Saved. Open Instagram and add it to your story." : null);
+    setStatus(result === "shared" ? "Shared!" : result === "downloaded" ? "Saved. Open Instagram and add it to your story." : null);
   }
 
   if (!open) {
     return (
       <button type="button" className="btn-secondary" onClick={() => setOpen(true)}>
-        📸 Share to Instagram
+        Share to Instagram
       </button>
     );
   }
@@ -371,7 +372,7 @@ function ShareCardButton({ info, wishes }: { info: WallInfo; wishes: Wish[] }) {
         </fieldset>
         <div>
           <label htmlFor="card-line" className="label">Your plan or a line</label>
-          <input id="card-line" className="field" maxLength={140} placeholder="Cake at 4:30 PM in the CSE lab 🎂" value={line} onChange={(e) => setLine(e.target.value)} />
+          <input id="card-line" className="field" maxLength={140} placeholder="Cake at 4:30 PM in the CSE lab" value={line} onChange={(e) => setLine(e.target.value)} />
         </div>
         <p className="hint">On a phone, “Share” opens the share sheet: pick Instagram and add it to your story. Private notes are never on the card.</p>
         <div className="flex flex-wrap gap-2">

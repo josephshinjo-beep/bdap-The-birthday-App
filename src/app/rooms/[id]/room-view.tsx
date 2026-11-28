@@ -9,6 +9,7 @@ import { data } from "@/lib/data";
 import { daysBetween, nextBirthday, parseISODate, relativeDays, todayIST } from "@/lib/dates";
 import { useAsync } from "@/lib/use-async";
 import { isAdminRole, type Celebration, type Member, type Room, type Session } from "@/lib/types";
+import { ChevronIcon } from "@/components/icons";
 
 export function RoomView() {
   return <AuthGate>{(s) => <RoomLoader session={s} />}</AuthGate>;
@@ -76,12 +77,12 @@ function RoomHome({ room, session }: { room: Room; session: Session }) {
       {myWall && (
         <Link href={`/rooms/${room.id}/wall/${myWall.celebrationId}`} className="pop-in flex items-center justify-between gap-3 rounded-[20px] bg-plum p-4 text-white">
           <span>
-            <b className="block font-display text-xl">Happy birthday! 🎉 Your wall is ready</b>
+            <b className="block font-display text-xl">Happy birthday! Your wall is ready</b>
             <span className="text-sm text-plum-soft">
               {myWall.wishCount ? `${myWall.wishCount} notes from ${room.name} are waiting for you.` : `Your classmates are writing on it.`}
             </span>
           </span>
-          <span aria-hidden="true" className="text-2xl">→</span>
+          <ChevronIcon className="text-2xl" />
         </Link>
       )}
       <Columns
@@ -176,7 +177,7 @@ function Upcoming({ room, members, celebrations, me }: { room: Room; members: Me
                 </div>
                 {cel && !isMe ? (
                   <Link href={`/rooms/${room.id}/wall/${cel.id}`} className="pill pill-mint hover:underline" aria-label={`Write on ${m.fullName}'s birthday wall`}>
-                    ✍️ Wall · {days === 0 ? "today" : days === 1 ? "tomorrow" : `${days}d`}
+                    Wall · {days === 0 ? "today" : days === 1 ? "tomorrow" : `${days}d`}
                   </Link>
                 ) : isMe ? (
                   <span className="pill pill-sun">That&apos;s you</span>
@@ -211,7 +212,7 @@ function NextCard({ room, members, celebrations, me }: { room: Room; members: Me
         </h2>
         <Countdown date={next.date} tone="pink" />
         <Link href={`/rooms/${room.id}/surprise/${next.id}`} className="btn-on-pink">
-          Open the surprise →
+          Open the surprise
         </Link>
       </section>
     );

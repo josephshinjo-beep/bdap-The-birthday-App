@@ -131,7 +131,7 @@ function SurpriseFlow({ room, celebration }: { room: Room; celebration: Celebrat
           <>
             <span className="pill pill-pink self-start">Top secret · {first} can&apos;t see this</span>
             <h1 className="a-h">
-              A gift for <em>{first}</em>
+              A gift for <span className="hl">{first}</span>
             </h1>
             <p className="a-sub -mt-2">
               {formatISODayMonth(celebration.date)} · {relativeDays(days)}
@@ -189,7 +189,7 @@ function SurpriseFlow({ room, celebration }: { room: Room; celebration: Celebrat
             <PollCard celebrationId={celebration.id} canManage={isAdmin} />
             <Link href={`/rooms/${room.id}/wall/${celebration.id}`} className="card flex items-center justify-between gap-3">
               <span>
-                <b className="block text-plum">Write on {first}&apos;s birthday wall ✍️</b>
+                <b className="block text-plum">Write on {first}&apos;s birthday wall</b>
                 <span className="hint">Stick a note, or send a private message only {first} can read. Revealed on the day.</span>
               </span>
               <span aria-hidden="true" className="text-plum">→</span>
@@ -365,12 +365,12 @@ function PoolCard({ celebrationId, isRep, surprise, amount }: { celebrationId: s
           aria-valuemax={p.eligibleCount}
           aria-label="People who chipped in"
         >
-          <i className="block h-full rounded-full bg-mint transition-[width] duration-500" style={{ width: `${pct}%` }} />
+          <i className="block h-full rounded-full bg-mint transition-transform duration-500" style={{ transform: `translateX(${pct - 100}%)` }} />
         </div>
         {surprise?.upi && (
           <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold text-ink">
             <input type="checkbox" className="h-5 w-5 accent-[var(--mint)]" checked={Boolean(paidAt)} disabled={saving} onChange={(e) => togglePaid(e.target.checked)} />
-            {paidAt ? "You've chipped in 🎉" : "I've chipped in"}
+            {paidAt ? "You've chipped in" : "I've chipped in"}
           </label>
         )}
         {surprise?.upi && <p className="hint -mt-1.5">Tick this after paying. UPI doesn&apos;t tell bdap, so it&apos;s on your word.</p>}

@@ -61,11 +61,11 @@ function Waiting() {
       <Envelope />
       <h1 className="a-h text-center">
         {current === "approved" ? (
-          <>You&apos;re <em>in!</em></>
+          <>You&apos;re <span className="hl">in!</span></>
         ) : current === "declined" ? (
-          <>Request <em>declined</em></>
+          <>Request <span className="hl">declined</span></>
         ) : (
-          <>Request sent to <em>{room.data.name}</em></>
+          <>Request sent to <span className="hl">{room.data.name}</span></>
         )}
       </h1>
       <p className="a-sub text-center" aria-live="polite">

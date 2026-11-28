@@ -48,7 +48,7 @@ export function ScratchCard({ children, onReveal, revealed: initiallyRevealed = 
       ctx.fillStyle = "#221b3a";
       ctx.font = "800 22px system-ui, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("Scratch here ✨", width / 2, height / 2);
+      ctx.fillText("Scratch here", width / 2, height / 2);
       ctx.font = "500 14px system-ui, sans-serif";
       ctx.fillText("your QR is underneath", width / 2, height / 2 + 24);
     }
