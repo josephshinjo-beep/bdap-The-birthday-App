@@ -452,6 +452,7 @@ Ideas for after launch (the owner picks):
 | The app shows demo data in production | `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` is missing in Vercel. Redeploy after adding them. |
 | No push on iPhone | Install it first (Share → Add to Home Screen, iOS 16.4+), then turn notifications on from inside the installed app. |
 | "Notifications allowed" but nothing arrives | The VAPID keys aren't set on the server. |
+| Is push working on my phone? | Open **Me → Notifications → Send test notification**. It pushes only to that device and says what went wrong: VAPID keys missing, keys not a matching pair, or the device registration expired. |
 | The cron route returns 401 | The `Authorization: Bearer …` value doesn't match `CRON_SECRET`, or the secret is shorter than 16 characters. |
 | Reminders never run | Check `select * from cron.job_run_details order by start_time desc limit 10;` and `select * from net._http_response order by created desc limit 10;` in Supabase. |
 | Build error about `useSearchParams` or `useParams` | With Cache Components on, these must be read inside a `<Suspense>` boundary. Keep the `page.tsx` + `*-view.tsx` pattern. |

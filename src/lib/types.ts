@@ -335,6 +335,16 @@ export interface PushSubscriptionInput {
   userAgent?: string;
 }
 
+/** Outcome of "Send test notification" for this device. */
+export interface TestPushResult {
+  /** Matching subscriptions saved on the server for this device (0 = not registered). */
+  devices: number;
+  sent: number;
+  failed: number;
+  /** The push service says this subscription has expired. */
+  gone: number;
+}
+
 /** Error codes the data layer throws (DataError.code). */
 export type DataErrorCode =
   | "not_signed_in"

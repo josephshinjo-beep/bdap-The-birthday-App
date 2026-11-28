@@ -19,6 +19,7 @@ import type {
   Pool,
   ProfileInput,
   PushSubscriptionInput,
+  TestPushResult,
   Role,
   Room,
   RoomPreview,
@@ -121,4 +122,6 @@ export interface DataApi {
   onNotification(cb: (n: AppNotification) => void): Unsubscribe;
   savePushSubscription(sub: PushSubscriptionInput): Promise<void>;
   deletePushSubscription(endpoint: string): Promise<void>;
+  /** Push a test notification to this device (identified by its subscription endpoint). */
+  sendTestPush(endpoint: string): Promise<TestPushResult>;
 }

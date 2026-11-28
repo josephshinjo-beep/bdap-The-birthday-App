@@ -22,6 +22,7 @@ import {
   type RoomSummary,
   type Session,
   type Surprise,
+  type TestPushResult,
   type UpiAccount,
 } from "@/lib/types";
 import type { DataApi } from "./api";
@@ -595,5 +596,14 @@ export const supabaseApi: DataApi = {
 
   async deletePushSubscription(endpoint) {
     await fetch("/api/push", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint }) });
+  },
+
+  async sendTestPush(endpoint) {
+    const res = await fetch("/api/push/test", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint }) });
+    if (res.ok) return (await res.json()) as TestPushResult;
+    if (res.status === 401) throw new DataError("not_signed_in", "Sign in again, then retry.");
+    if (res.status === 429) throw new DataError("invalid_input", "Wait a few seconds before sending another test.");
+    if (res.status === 503) throw new DataError("unknown", "Push isn't set up on the server yet: the VAPID keys are missing in Vercel.");
+    throw new DataError("unknown", "Couldn't send the test notification. Try again in a minute.");
   },
 };

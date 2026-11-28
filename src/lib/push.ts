@@ -34,6 +34,11 @@ function configure(): boolean {
   return true;
 }
 
+/** True when both VAPID keys are set on the server, so pushes can actually be sent. */
+export function isPushConfigured(): boolean {
+  return configure();
+}
+
 export interface StoredSubscription {
   endpoint: string;
   p256dh: string;
